@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    restart: unless-stopped
+    # Depending on how the backend docker is set up, you might want to attach this to a shared network
+    # networks:
+    #   - af-crm-network

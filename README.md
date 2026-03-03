@@ -25,14 +25,31 @@ To run the application via Docker:
 
 We work on a sprint-based approach. The ongoing tasks for each sprint are tracked below:
 
-### Sprint 1: Setup & Basic Structure
-- [ ] Initialize Vite + React project inside the `app` folder.
-- [ ] Add Docker setup for the frontend (`docker-compose.yml`, `Dockerfile`).
-- [ ] Configure TailwindCSS / Vanilla CSS for responsive layouts.
-- [ ] Implement foundational basic layout and routing.
-- [ ] Setup initial API connection layer to `http://localhost:8080`.
+### Sprint 1: Foundation & Authentication
+- [ ] Initialize Vite + React + Tailwind CSS project inside the `app` folder.
+- [ ] Configure Axios with Interceptor for Authorization: Bearer JWT.
+- [ ] Implement React Router.
+- [ ] Build Login Page and AuthContext for global state.
 
-### Sprint 2: Core Features & UI Polish
-- [ ] Implement Core features views (Dashboards, Tables, etc).
-- [ ] Apply rich aesthetic design and smooth micro-animations.
-- [ ] Finalize responsive designs for mobile/tablet/desktop.
+### Sprint 2: Core Admin Management
+- [ ] Implement Main Layout (Sidebar + page container).
+- [ ] CRUD for Technicians (Table with search/filters, Modals).
+- [ ] CRUD for Services (Complex forms: Client, Frequency).
+- [ ] Service cancellation logic.
+
+### Sprint 3: The Calendar Engine
+- [ ] Calendar view integration (fetch tasks from `/api/calendar`).
+- [ ] Visual state differentiation for tasks (Pending, Completed, Cancelled).
+- [ ] Task detail modals.
+- [ ] Quick "New Eventual Task" form.
+
+### Sprint 4: Technical Reporting & Pre-fill
+- [ ] Smart Form for Electromechanical reporting (react-hook-form).
+- [ ] Pre-fill fields via `/api/calendar/{id}/form-data`.
+- [ ] Input fields for 30+ electrical metrics.
+- [ ] Submit logic to `/api/reports` and status update.
+
+### Sprint 5: RBAC & Final Polishing
+- [ ] Role-Based Access Control (RBAC) to restrict TECH roles.
+- [ ] Protected routes.
+- [ ] UX/UI Polish (Dark mode, Skeleton Loaders, 404 page, error handling).
