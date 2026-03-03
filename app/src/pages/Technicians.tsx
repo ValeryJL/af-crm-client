@@ -13,16 +13,19 @@ export function Technicians() {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center whitespace-nowrap">
-                <h1 className="text-2xl font-bold text-gray-800">Technicians</h1>
-                <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+            <div className="flex justify-between items-center whitespace-nowrap mb-8 pb-4 border-b border-slate-200">
+                <div>
+                    <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Technicians</h1>
+                    <p className="text-slate-500 mt-1">Manage field staff directory and statuses</p>
+                </div>
+                <button className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-medium transition-all shadow-md shadow-indigo-200 hover:shadow-lg hover:-translate-y-0.5">
                     <Plus size={20} />
                     <span>New Technician</span>
                 </button>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="p-4 border-b border-gray-100 flex items-center gap-4">
+            <div className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-slate-100 overflow-hidden">
+                <div className="p-5 border-b border-slate-100 flex items-center gap-4 bg-slate-50/50">
                     <div className="relative flex-1 max-w-md">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                         <input
@@ -38,33 +41,38 @@ export function Technicians() {
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="bg-gray-50 border-b border-gray-200 text-sm text-gray-600">
-                                <th className="p-4 font-medium">Name</th>
-                                <th className="p-4 font-medium">Email</th>
-                                <th className="p-4 font-medium">Phone</th>
-                                <th className="p-4 font-medium">Status</th>
-                                <th className="p-4 font-medium">Actions</th>
+                            <tr className="bg-slate-50/80 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold">
+                                <th className="p-4 pl-6">Name</th>
+                                <th className="p-4">Email</th>
+                                <th className="p-4">Phone</th>
+                                <th className="p-4">Status</th>
+                                <th className="p-4 pr-6 text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100">
+                        <tbody className="divide-y divide-slate-100">
                             {techs.map((tech) => (
-                                <tr key={tech.id} className="hover:bg-gray-50 transition-colors">
-                                    <td className="p-4">
-                                        <div className="font-semibold text-gray-800">{tech.name}</div>
+                                <tr key={tech.id} className="hover:bg-slate-50/80 transition-colors group">
+                                    <td className="p-4 pl-6">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-100 to-blue-50 text-indigo-700 flex items-center justify-center font-bold text-sm">
+                                                {tech.name.charAt(0)}
+                                            </div>
+                                            <div className="font-semibold text-slate-800">{tech.name}</div>
+                                        </div>
                                     </td>
-                                    <td className="p-4 text-gray-600">{tech.email}</td>
-                                    <td className="p-4 text-gray-600">{tech.phone}</td>
+                                    <td className="p-4 text-slate-600 font-medium">{tech.email}</td>
+                                    <td className="p-4 text-slate-600 font-medium">{tech.phone}</td>
                                     <td className="p-4">
-                                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${tech.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                                        <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${tech.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
                                             }`}>
                                             {tech.status}
                                         </span>
                                     </td>
-                                    <td className="p-4 flex gap-2">
-                                        <button className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                                    <td className="p-4 pr-6 flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
                                             <Edit2 size={18} />
                                         </button>
-                                        <button className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                                        <button className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors">
                                             <Trash2 size={18} />
                                         </button>
                                     </td>
