@@ -1,15 +1,50 @@
-import { useState } from 'react';
-import { Plus, Search, Calendar, MapPin, PowerOff } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Search, Calendar, MapPin, PowerOff, AlertCircle } from 'lucide-react';
+import apiClient from '../api/client';
+
+interface Grupo {
+    id: number;
+    nombre: string;
+}
+
+interface Service {
+    id: number;
+    cliente: string;
+    nombre: string;
+    direccion: string;
+    frecuencia: string;
+    baja?: string | null;
+    grupos?: Grupo | null;
+}
 
 export function Services() {
     const [searchTerm, setSearchTerm] = useState('');
+    const [services, setServices] = useState<Service[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    // Dummy mock data for Services/Contracts
-    const services = [
-        { id: 1, client: 'Acme Corporation', engineInfo: 'Volvo Penta 500kVA', frequency: 'Monthly', location: 'Plant A', active: true },
-        { id: 2, client: 'Global Industries', engineInfo: 'Cummins 250kVA', frequency: 'Quarterly', location: 'HQ Bldg', active: true },
-        { id: 3, client: 'Tech Solutions', engineInfo: 'Caterpillar 1000kVA', frequency: 'Bi-Weekly', location: 'Datacenter', active: false },
-    ];
+    useEffect(() => {
+        const fetchServices = async () => {
+            try {
+                const response = await apiClient.get('/services');
+                setServices(response.data);
+                setError(null);
+            } catch (err: any) {
+                console.error('Error fetching services:', err);
+                setError(err.response?.data?.message || 'Failed to connect to the server.');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchServices();
+    }, []);
+
+    const filteredServices = services.filter(svc =>
+        svc.cliente?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        svc.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        svc.direccion?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     return (
         <div className="space-y-6">
@@ -46,45 +81,70 @@ export function Services() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
-                    {services.map((svc) => (
-                        <div key={svc.id} className={`bg-white border rounded-2xl p-6 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 flex flex-col gap-4 ${svc.active ? 'border-slate-200' : 'border-rose-200 bg-rose-50/30'}`}>
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <h3 className="font-bold text-xl text-slate-800 tracking-tight">{svc.client}</h3>
-                                    <span className={`inline-block px-3 py-1 mt-2 text-xs font-bold uppercase tracking-wider rounded-md ${svc.active ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-                                        {svc.active ? 'ACTIVE' : 'INACTIVE'}
-                                    </span>
-                                </div>
-                                <button title={svc.active ? "Cancel Service" : "Service Disabled"} disabled={!svc.active} className={`p-2 rounded-xl transition-colors ${svc.active ? 'text-slate-400 hover:text-rose-500 hover:bg-rose-50' : 'text-slate-300 cursor-not-allowed'}`}>
-                                    <PowerOff size={20} />
-                                </button>
-                            </div>
-
-                            <div className="space-y-3 text-sm text-slate-600 mt-2 flex-1 font-medium bg-slate-50 p-4 rounded-xl border border-slate-100">
-                                <div className="flex items-center gap-3">
-                                    <WrenchIcon size={18} className="text-indigo-400" />
-                                    <span>{svc.engineInfo}</span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <Calendar size={18} className="text-sky-400" />
-                                    <span>{svc.frequency}</span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <MapPin size={18} className="text-amber-400" />
-                                    <span>{svc.location}</span>
-                                </div>
-                            </div>
-
-                            <div className="pt-4 border-t border-slate-100 mt-2 flex justify-between items-center">
-                                <span className="text-xs text-slate-400 font-medium">ID: #{svc.id.toString().padStart(4, '0')}</span>
-                                <button className="text-indigo-600 font-bold text-sm hover:text-indigo-700 flex items-center gap-1 group">
-                                    View Details
-                                    <span className="opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all">→</span>
-                                </button>
-                            </div>
+                <div className="min-h-[300px]">
+                    {isLoading ? (
+                        <div className="flex flex-col items-center justify-center p-12 text-slate-400">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mb-4"></div>
+                            <p>Loading services...</p>
                         </div>
-                    ))}
+                    ) : error ? (
+                        <div className="flex flex-col items-center justify-center p-12 text-rose-500">
+                            <AlertCircle size={32} className="mb-2 opacity-50" />
+                            <p className="font-medium text-center">{error}</p>
+                        </div>
+                    ) : services.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center p-16 text-slate-400">
+                            <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4 border border-slate-100 shadow-sm">
+                                <Plus size={24} className="text-slate-300" />
+                            </div>
+                            <p className="font-medium text-slate-600 text-lg">No services found.</p>
+                            <p className="text-sm mt-1">Create a new service contract to get started.</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
+                            {filteredServices.map((svc) => {
+                                const isActive = !svc.baja;
+                                return (
+                                    <div key={svc.id} className={`bg-white border rounded-2xl p-6 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 flex flex-col gap-4 ${isActive ? 'border-slate-200' : 'border-rose-200 bg-rose-50/30'}`}>
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <h3 className="font-bold text-xl text-slate-800 tracking-tight">{svc.cliente || 'Unknown Client'}</h3>
+                                                <span className={`inline-block px-3 py-1 mt-2 text-xs font-bold uppercase tracking-wider rounded-md ${isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                                                    {isActive ? 'ACTIVE' : 'INACTIVE'}
+                                                </span>
+                                            </div>
+                                            <button title={isActive ? "Cancel Service" : "Service Disabled"} disabled={!isActive} className={`p-2 rounded-xl transition-colors ${isActive ? 'text-slate-400 hover:text-rose-500 hover:bg-rose-50' : 'text-slate-300 cursor-not-allowed'}`}>
+                                                <PowerOff size={20} />
+                                            </button>
+                                        </div>
+
+                                        <div className="space-y-3 text-sm text-slate-600 mt-2 flex-1 font-medium bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                            <div className="flex items-center gap-3">
+                                                <WrenchIcon size={18} className="text-indigo-400" />
+                                                <span>{svc.grupos?.nombre || svc.nombre || 'Unspecified Engine'}</span>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <Calendar size={18} className="text-sky-400" />
+                                                <span>{svc.frecuencia || 'Unscheduled'}</span>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <MapPin size={18} className="text-amber-400" />
+                                                <span>{svc.direccion || 'Unspecified Location'}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="pt-4 border-t border-slate-100 mt-2 flex justify-between items-center">
+                                            <span className="text-xs text-slate-400 font-medium">ID: #{svc.id.toString().padStart(4, '0')}</span>
+                                            <button className="text-indigo-600 font-bold text-sm hover:text-indigo-700 flex items-center gap-1 group">
+                                                View Details
+                                                <span className="opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all">→</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
@@ -95,5 +155,5 @@ export function Services() {
 function WrenchIcon({ size, className }: { size: number, className: string }) {
     return (
         <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" /></svg>
-    )
+    );
 }
