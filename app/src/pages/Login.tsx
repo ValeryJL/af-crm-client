@@ -1,24 +1,45 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import apiClient from '../api/client';
 
 export function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const { login } = useAuth();
     const navigate = useNavigate();
 
-    const handleLogin = (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
+        setError(null);
 
-        // Mocking API call
-        setTimeout(() => {
-            login('dummy-jwt-token-from-backend', { email, name: 'John Doe', role: 'ADMIN' });
-            setIsLoading(false);
+        try {
+            const response = await apiClient.post('/auth/login', { email, password });
+            const { token } = response.data;
+
+            // Minimal JWT payload decoder
+            const payloadBase64 = token.split('.')[1];
+            const payloadJson = atob(payloadBase64.replace(/-/g, '+').replace(/_/g, '/'));
+            const payload = JSON.parse(payloadJson);
+
+            // Extract typical claims
+            const userData = {
+                email: payload.sub || email,
+                role: payload.role || payload.roles || 'UNKNOWN',
+                name: payload.name || payload.sub?.split('@')[0] || 'User'
+            };
+
+            login(token, userData);
             navigate('/');
-        }, 800);
+        } catch (err: any) {
+            console.error('Login failed', err);
+            setError(err.response?.data?.message || 'Invalid email or password.');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -44,6 +65,11 @@ export function Login() {
                     </p>
                 </div>
                 <form className="mt-8 space-y-6" onSubmit={handleLogin}>
+                    {error && (
+                        <div className="bg-rose-500/10 border border-rose-500/50 rounded-xl p-3 flex items-center justify-center">
+                            <p className="text-sm text-rose-400 font-medium">{error}</p>
+                        </div>
+                    )}
                     <div className="space-y-4">
                         <div>
                             <label htmlFor="email-address" className="block text-sm font-medium text-slate-300 mb-1">Email address</label>
