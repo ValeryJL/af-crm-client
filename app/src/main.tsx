@@ -9,7 +9,7 @@ import { Login } from './pages/Login.tsx'
 import { Technicians } from './pages/Technicians.tsx'
 import { Services } from './pages/Services.tsx'
 import { useAuth } from './context/AuthContext.tsx'
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const { token } = useAuth();
