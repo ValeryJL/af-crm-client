@@ -1,8 +1,10 @@
 import axios from 'axios';
 
-// Default API URL is pointing to local host 8080 as specified by the sprint plan.
+// Dynamically point to the same host but on port 8080 for the API
+const apiBaseUrl = `http://${window.location.hostname}:8080/api`;
+
 const apiClient = axios.create({
-    baseURL: 'http://localhost:8080/api',
+    baseURL: apiBaseUrl,
     headers: {
         'Content-Type': 'application/json',
     },
