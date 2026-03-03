@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Calendar, MapPin, PowerOff, AlertCircle } from 'lucide-react';
+import { Plus, Search, Calendar, MapPin, PowerOff, AlertCircle, X, Loader2 } from 'lucide-react';
 import apiClient from '../api/client';
 
 interface Grupo {
@@ -23,22 +23,58 @@ export function Services() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        const fetchServices = async () => {
-            try {
-                const response = await apiClient.get('/services');
-                setServices(response.data);
-                setError(null);
-            } catch (err: any) {
-                console.error('Error fetching services:', err);
-                setError(err.response?.data?.message || 'Failed to connect to the server.');
-            } finally {
-                setIsLoading(false);
-            }
-        };
+    // Modal State
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // Form State
+    const [formData, setFormData] = useState({
+        cliente: '',
+        nombre: '',
+        direccion: '',
+        frecuencia: 'Mensual',
+        observaciones: ''
+    });
+
+    const fetchServices = async () => {
+        setIsLoading(true);
+        try {
+            const response = await apiClient.get('/services');
+            setServices(response.data);
+            setError(null);
+        } catch (err: any) {
+            console.error('Error fetching services:', err);
+            setError(err.response?.data?.message || 'Failed to connect to the server.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchServices();
     }, []);
+
+    const handleCreateService = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        try {
+            await apiClient.post('/services', formData);
+            setIsModalOpen(false);
+            setFormData({
+                cliente: '',
+                nombre: '',
+                direccion: '',
+                frecuencia: 'Mensual',
+                observaciones: ''
+            });
+            fetchServices(); // Refetch table
+        } catch (err: any) {
+            console.error('Failed to create service', err);
+            alert(err.response?.data?.message || 'Failed to create service.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     const filteredServices = services.filter(svc =>
         svc.cliente?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -53,7 +89,9 @@ export function Services() {
                     <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Services & Contracts</h1>
                     <p className="text-slate-500 mt-1">Manage generator maintenance schedules</p>
                 </div>
-                <button className="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-medium transition-all shadow-md shadow-indigo-200 hover:shadow-lg hover:-translate-y-0.5 w-full sm:w-auto">
+                <button
+                    onClick={() => setIsModalOpen(true)}
+                    className="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-medium transition-all shadow-md shadow-indigo-200 hover:shadow-lg hover:-translate-y-0.5 w-full sm:w-auto">
                     <Plus size={20} />
                     <span>New Service Request</span>
                 </button>
@@ -147,6 +185,95 @@ export function Services() {
                     )}
                 </div>
             </div>
+
+            {/* New Service Modal */}
+            {isModalOpen && (
+                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col animate-fade-in-up my-8">
+                        <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50/50">
+                            <h2 className="text-xl font-bold text-slate-800">New Service Contract</h2>
+                            <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-rose-500 transition-colors bg-white p-1 rounded-full shadow-sm">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <form onSubmit={handleCreateService} className="p-6 flex flex-col gap-4">
+                            <div className="flex flex-col sm:flex-row gap-4">
+                                <div className="flex-1">
+                                    <label className="block text-sm font-semibold text-slate-700 mb-1">Company/Client <span className="text-rose-500">*</span></label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={formData.cliente}
+                                        onChange={(e) => setFormData({ ...formData, cliente: e.target.value })}
+                                        className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                                        placeholder="AF-CRM Corp"
+                                    />
+                                </div>
+                                <div className="flex-1">
+                                    <label className="block text-sm font-semibold text-slate-700 mb-1">Equipment Name <span className="text-rose-500">*</span></label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={formData.nombre}
+                                        onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                                        className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                                        placeholder="Main Data Center UPS"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-1">Service Address <span className="text-rose-500">*</span></label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={formData.direccion}
+                                    onChange={(e) => setFormData({ ...formData, direccion: e.target.value })}
+                                    className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                                    placeholder="Av. Corrientes 1234, CABA"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-1">Frequency <span className="text-rose-500">*</span></label>
+                                <select
+                                    required
+                                    value={formData.frecuencia}
+                                    onChange={(e) => setFormData({ ...formData, frecuencia: e.target.value })}
+                                    className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                                >
+                                    <option value="Mensual">Mensual (12/year)</option>
+                                    <option value="Bimestral">Bimestral (6/year)</option>
+                                    <option value="Trimestral">Trimestral (4/year)</option>
+                                    <option value="Semestral">Semestral (2/year)</option>
+                                    <option value="Anual">Anual (1/year)</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-1">Observations</label>
+                                <textarea
+                                    rows={2}
+                                    value={formData.observaciones}
+                                    onChange={(e) => setFormData({ ...formData, observaciones: e.target.value })}
+                                    className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none resize-none"
+                                    placeholder="Gate access code, special requirements..."
+                                />
+                            </div>
+
+                            <div className="flex gap-3 justify-end mt-4">
+                                <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 rounded-xl font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors">
+                                    Cancel
+                                </button>
+                                <button type="submit" disabled={isSubmitting} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white px-5 py-2.5 rounded-xl font-medium transition-colors shadow-md shadow-indigo-200">
+                                    {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <Plus size={18} />}
+                                    <span>Create Service</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

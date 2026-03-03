@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Edit2, Trash2, AlertCircle } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, AlertCircle, X, Loader2 } from 'lucide-react';
 import apiClient from '../api/client';
 
 interface Technician {
@@ -17,22 +17,51 @@ export function Technicians() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        const fetchTechs = async () => {
-            try {
-                const response = await apiClient.get('/technicians');
-                setTechs(response.data);
-                setError(null);
-            } catch (err: any) {
-                console.error('Error fetching technicians:', err);
-                setError(err.response?.data?.message || 'Failed to connect to the server.');
-            } finally {
-                setIsLoading(false);
-            }
-        };
+    // Modal state
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // Form State
+    const [formData, setFormData] = useState({
+        nombre: '',
+        apellido: '',
+        mail: '',
+        telefono: ''
+    });
+
+    const fetchTechs = async () => {
+        setIsLoading(true);
+        try {
+            const response = await apiClient.get('/technicians');
+            setTechs(response.data);
+            setError(null);
+        } catch (err: any) {
+            console.error('Error fetching technicians:', err);
+            setError(err.response?.data?.message || 'Failed to connect to the server.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchTechs();
     }, []);
+
+    const handleCreateTechnician = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        try {
+            await apiClient.post('/technicians', formData);
+            setIsModalOpen(false);
+            setFormData({ nombre: '', apellido: '', mail: '', telefono: '' });
+            fetchTechs(); // Refetch table
+        } catch (err: any) {
+            console.error('Failed to create technician', err);
+            alert(err.response?.data?.message || 'Failed to create technician.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     const filteredTechs = techs.filter(t =>
         t.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -47,7 +76,9 @@ export function Technicians() {
                     <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Technicians</h1>
                     <p className="text-slate-500 mt-1">Manage field staff directory and statuses</p>
                 </div>
-                <button className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-medium transition-all shadow-md shadow-indigo-200 hover:shadow-lg hover:-translate-y-0.5">
+                <button
+                    onClick={() => setIsModalOpen(true)}
+                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-medium transition-all shadow-md shadow-indigo-200 hover:shadow-lg hover:-translate-y-0.5">
                     <Plus size={20} />
                     <span>New Technician</span>
                 </button>
@@ -131,6 +162,76 @@ export function Technicians() {
                     )}
                 </div>
             </div>
+
+            {/* New Technician Modal */}
+            {isModalOpen && (
+                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-fade-in-up">
+                        <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50/50">
+                            <h2 className="text-xl font-bold text-slate-800">New Technician</h2>
+                            <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-rose-500 transition-colors bg-white p-1 rounded-full shadow-sm">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <form onSubmit={handleCreateTechnician} className="p-6 flex flex-col gap-4">
+                            <div className="flex gap-4">
+                                <div className="flex-1">
+                                    <label className="block text-sm font-semibold text-slate-700 mb-1">First Name <span className="text-rose-500">*</span></label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={formData.nombre}
+                                        onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                                        className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                                        placeholder="Juan"
+                                    />
+                                </div>
+                                <div className="flex-1">
+                                    <label className="block text-sm font-semibold text-slate-700 mb-1">Last Name <span className="text-rose-500">*</span></label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={formData.apellido}
+                                        onChange={(e) => setFormData({ ...formData, apellido: e.target.value })}
+                                        className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                                        placeholder="Perez"
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-1">Email Address <span className="text-rose-500">*</span></label>
+                                <input
+                                    type="email"
+                                    required
+                                    value={formData.mail}
+                                    onChange={(e) => setFormData({ ...formData, mail: e.target.value })}
+                                    className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                                    placeholder="juan@afcrm.com"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-1">Phone Number</label>
+                                <input
+                                    type="tel"
+                                    value={formData.telefono}
+                                    onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
+                                    className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                                    placeholder="+54 9 11 1234-5678"
+                                />
+                            </div>
+                            <div className="flex gap-3 justify-end mt-4">
+                                <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 rounded-xl font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors">
+                                    Cancel
+                                </button>
+                                <button type="submit" disabled={isSubmitting} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white px-5 py-2.5 rounded-xl font-medium transition-colors shadow-md shadow-indigo-200">
+                                    {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <Plus size={18} />}
+                                    <span>Create Technician</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
