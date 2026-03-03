@@ -26,16 +26,16 @@ To run the application via Docker:
 We work on a sprint-based approach. The ongoing tasks for each sprint are tracked below:
 
 ### Sprint 1: Foundation & Authentication
-- [ ] Initialize Vite + React + Tailwind CSS project inside the `app` folder.
-- [ ] Configure Axios with Interceptor for Authorization: Bearer JWT.
-- [ ] Implement React Router.
-- [ ] Build Login Page and AuthContext for global state.
+- [x] Initialize Vite + React + Tailwind CSS project inside the `app` folder.
+- [x] Configure Axios with Interceptor for Authorization: Bearer JWT.
+- [x] Implement React Router.
+- [x] Build Login Page and AuthContext for global state.
 
 ### Sprint 2: Core Admin Management
-- [ ] Implement Main Layout (Sidebar + page container).
-- [ ] CRUD for Technicians (Table with search/filters, Modals).
-- [ ] CRUD for Services (Complex forms: Client, Frequency).
-- [ ] Service cancellation logic.
+- [x] Implement Main Layout (Sidebar + page container).
+- [x] CRUD for Technicians (Table with search/filters, Modals).
+- [x] CRUD for Services (Complex forms: Client, Frequency).
+- [x] Service cancellation logic.
 
 ### Sprint 3: The Calendar Engine
 - [ ] Calendar view integration (fetch tasks from `/api/calendar`).

@@ -8,6 +8,7 @@ import { Dashboard } from './pages/Dashboard.tsx'
 import { Login } from './pages/Login.tsx'
 import { Technicians } from './pages/Technicians.tsx'
 import { Services } from './pages/Services.tsx'
+import { CalendarView } from './pages/CalendarView.tsx'
 import { useAuth } from './context/AuthContext.tsx'
 import type { ReactNode } from 'react'
 
@@ -29,7 +30,8 @@ createRoot(document.getElementById('root')!).render(
             <Route index element={<Dashboard />} />
             <Route path="/technicians" element={<Technicians />} />
             <Route path="/services" element={<Services />} />
-            {/* Future routes will go here, e.g., /calendar */}
+            <Route path="/calendar" element={<CalendarView />} />
+            {/* Future routes will go here */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>
