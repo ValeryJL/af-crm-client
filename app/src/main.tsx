@@ -10,6 +10,7 @@ import { Setup } from './pages/Setup.tsx'
 import { Technicians } from './pages/Technicians.tsx'
 import { Services } from './pages/Services.tsx'
 import { CalendarView } from './pages/CalendarView.tsx'
+import { Settings } from './pages/Settings.tsx'
 import { useAuth } from './context/AuthContext.tsx'
 import apiClient from './api/client'
 import type { ReactNode } from 'react'
@@ -60,6 +61,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="/technicians" element={<Technicians />} />
               <Route path="/services" element={<Services />} />
               <Route path="/calendar" element={<CalendarView />} />
+              <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>
