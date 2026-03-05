@@ -4,6 +4,7 @@ import { format, parse, startOfWeek, getDay, startOfMonth, endOfMonth } from 'da
 import { enUS } from 'date-fns/locale/en-US';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { Plus, Loader2, X, Calendar as CalendarIcon, Briefcase } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import apiClient from '../api/client';
 
 const locales = {
@@ -20,16 +21,11 @@ const localizer = dateFnsLocalizer({
 
 interface BackendTask {
     id: number;
-    fechaPlanificada: string;
-    estado: string; // e.g., 'PENDING', 'COMPLETED', 'CANCELLED'
-    servicios?: {
-        cliente: string;
-        nombre: string;
-    };
-    tareaEventual?: {
-        cliente: string;
-        titulo: string;
-    }
+    scheduledDate: string;
+    status: string; // 'PENDING', 'COMPLETED', 'CANCELLED'
+    type: string; // 'EVENTUAL' or 'REGULAR'
+    serviceId?: number;
+    serviceName?: string;
 }
 
 interface CalendarEvent {
@@ -49,6 +45,7 @@ interface ServiceObj {
 }
 
 export function CalendarView() {
+    const { user } = useAuth();
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isEventualModalOpen, setIsEventualModalOpen] = useState(false);
@@ -71,13 +68,13 @@ export function CalendarView() {
             const response = await apiClient.get(`/calendar?start=${startDateStr}&end=${endDateStr}`);
 
             const fetchedEvents: CalendarEvent[] = response.data.map((task: BackendTask) => {
-                const date = new Date(task.fechaPlanificada + 'T12:00:00'); // Normalize to midday to prevent timezone shifts
+                const date = new Date(task.scheduledDate + 'T12:00:00'); // Normalize to midday to prevent timezone shifts
                 let titleStr = 'Unknown Task';
 
-                if (task.servicios) {
-                    titleStr = `[Routine] ${task.servicios.cliente} - ${task.servicios.nombre}`;
-                } else if (task.tareaEventual) {
-                    titleStr = `[Eventual] ${task.tareaEventual.cliente} - ${task.tareaEventual.titulo}`;
+                if (task.type === 'EVENTUAL') {
+                    titleStr = `[Eventual] ${task.serviceName || 'Unknown Engine'}`;
+                } else {
+                    titleStr = `[Routine] ${task.serviceName || 'Unknown Engine'}`;
                 }
 
                 return {
@@ -85,7 +82,7 @@ export function CalendarView() {
                     title: titleStr,
                     start: date,
                     end: date,
-                    status: task.estado || 'PENDING',
+                    status: task.status || 'PENDING',
                     allDay: true,
                     resource: task
                 };
@@ -180,23 +177,25 @@ export function CalendarView() {
 
     return (
         <div className="space-y-6 flex flex-col h-[calc(100vh-8rem)]">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-slate-200 shrink-0">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-slate-200 dark:border-slate-700 shrink-0">
                 <div>
                     <div className="flex items-center gap-3">
-                        <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Schedule</h1>
+                        <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">Schedule</h1>
                         {isLoading && <Loader2 className="animate-spin text-indigo-500" size={24} />}
                     </div>
-                    <p className="text-slate-500 mt-1">Manage routine and eventual service tasks</p>
+                    <p className="text-slate-500 dark:text-slate-400 mt-1">Manage routine and eventual service tasks</p>
                 </div>
-                <button
-                    onClick={() => setIsEventualModalOpen(true)}
-                    className="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-medium transition-all shadow-md shadow-indigo-200 hover:shadow-lg hover:-translate-y-0.5 w-full sm:w-auto">
-                    <Plus size={20} />
-                    <span>New Eventual Task</span>
-                </button>
+                {(user?.role === 'ADMIN' || user?.role === 'TECH') && (
+                    <button
+                        onClick={() => setIsEventualModalOpen(true)}
+                        className="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-medium transition-all shadow-md shadow-indigo-200 hover:shadow-lg hover:-translate-y-0.5 w-full sm:w-auto">
+                        <Plus size={20} />
+                        <span>New Eventual Task</span>
+                    </button>
+                )}
             </div>
 
-            <div className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-slate-100 p-6 flex-1 min-h-[500px]">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] dark:shadow-none border border-slate-100 dark:border-slate-700 p-6 flex-1 min-h-[500px]">
                 <Calendar
                     localizer={localizer}
                     events={events}
@@ -212,20 +211,20 @@ export function CalendarView() {
 
             {/* Eventual Task Modal */}
             {isEventualModalOpen && (
-                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-fade-in-up">
-                        <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50/50">
-                            <h2 className="text-xl font-bold text-slate-800">New Eventual Task</h2>
-                            <button onClick={() => setIsEventualModalOpen(false)} className="text-slate-400 hover:text-rose-500 transition-colors bg-white p-1 rounded-full shadow-sm">
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-fade-in-up">
+                        <div className="flex justify-between items-center p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
+                            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">New Eventual Task</h2>
+                            <button onClick={() => setIsEventualModalOpen(false)} className="text-slate-400 hover:text-rose-500 transition-colors bg-white dark:bg-slate-700 p-1 rounded-full shadow-sm">
                                 <X size={20} />
                             </button>
                         </div>
                         <form onSubmit={handleCreateEventual} className="p-6 flex flex-col gap-4">
                             <div>
-                                <label className="block text-sm font-semibold text-slate-700 mb-1">Select Service <span className="text-rose-500">*</span></label>
+                                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Select Service <span className="text-rose-500">*</span></label>
                                 <select
                                     required
-                                    className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                                    className="w-full px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
                                     value={eventualServiceId}
                                     onChange={(e) => setEventualServiceId(e.target.value)}
                                 >
@@ -236,28 +235,28 @@ export function CalendarView() {
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-semibold text-slate-700 mb-1">Planned Date <span className="text-rose-500">*</span></label>
+                                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Planned Date <span className="text-rose-500">*</span></label>
                                 <input
                                     type="date"
                                     required
                                     value={eventualDate}
                                     onChange={(e) => setEventualDate(e.target.value)}
-                                    className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                                    className="w-full px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-semibold text-slate-700 mb-1">Description <span className="text-rose-500">*</span></label>
+                                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Description <span className="text-rose-500">*</span></label>
                                 <textarea
                                     required
                                     rows={3}
                                     value={eventualDesc}
                                     onChange={(e) => setEventualDesc(e.target.value)}
-                                    className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none resize-none"
+                                    className="w-full px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none resize-none"
                                     placeholder="Brief details about the eventual task..."
                                 />
                             </div>
                             <div className="flex gap-3 justify-end mt-4">
-                                <button type="button" onClick={() => setIsEventualModalOpen(false)} className="px-5 py-2.5 rounded-xl font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors">
+                                <button type="button" onClick={() => setIsEventualModalOpen(false)} className="px-5 py-2.5 rounded-xl font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
                                     Cancel
                                 </button>
                                 <button type="submit" disabled={isSubmitting} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white px-5 py-2.5 rounded-xl font-medium transition-colors shadow-md shadow-indigo-200">
@@ -272,47 +271,38 @@ export function CalendarView() {
 
             {/* Task Details Modal */}
             {selectedEvent && (
-                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col animate-fade-in-up">
-                        <div className="flex justify-between items-start p-6 border-b border-slate-100 bg-slate-50/50">
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col animate-fade-in-up">
+                        <div className="flex justify-between items-start p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
                             <div>
                                 <span className={`inline-block px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md mb-2
-                                    ${selectedEvent.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700' :
-                                        selectedEvent.status === 'CANCELLED' ? 'bg-rose-100 text-rose-700' :
-                                            'bg-amber-100 text-amber-700'}`}>
+                                    ${selectedEvent.status === 'COMPLETED' ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400' :
+                                        selectedEvent.status === 'CANCELLED' ? 'bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-400' :
+                                            'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400'}`}>
                                     {selectedEvent.status}
                                 </span>
-                                <h2 className="text-xl font-bold text-slate-800 leading-tight">{selectedEvent.title}</h2>
+                                <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 leading-tight">{selectedEvent.title}</h2>
                             </div>
-                            <button onClick={() => setSelectedEvent(null)} className="text-slate-400 hover:text-rose-500 transition-colors bg-white p-1 rounded-full shadow-sm">
+                            <button onClick={() => setSelectedEvent(null)} className="text-slate-400 hover:text-rose-500 transition-colors bg-white dark:bg-slate-700 p-1 rounded-full shadow-sm">
                                 <X size={20} />
                             </button>
                         </div>
-                        <div className="p-6 flex flex-col gap-4 text-sm font-medium text-slate-600">
+                        <div className="p-6 flex flex-col gap-4 text-sm font-medium text-slate-600 dark:text-slate-300">
                             <div className="flex items-center gap-3">
                                 <CalendarIcon className="text-sky-500" size={18} />
                                 <span>{format(selectedEvent.start, 'MMMM do, yyyy')}</span>
                             </div>
-                            {selectedEvent.resource.servicios && (
-                                <div className="flex items-start gap-3">
-                                    <Briefcase className="text-indigo-500 shrink-0" size={18} />
-                                    <div>
-                                        <p className="text-slate-800 font-bold">{selectedEvent.resource.servicios.cliente}</p>
-                                        <p className="text-xs text-slate-500">{selectedEvent.resource.servicios.nombre}</p>
-                                    </div>
-                                </div>
-                            )}
-                            {selectedEvent.resource.tareaEventual && (
-                                <div className="flex items-start gap-3 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                            {selectedEvent.resource.serviceName && (
+                                <div className="flex items-start gap-3 bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg border border-slate-100 dark:border-slate-700">
                                     <Briefcase className="text-indigo-500 shrink-0 mt-0.5" size={18} />
                                     <div>
-                                        <p className="text-slate-800 font-bold">{selectedEvent.resource.tareaEventual.cliente}</p>
-                                        <p className="text-xs italic text-slate-500 mt-1">Eventual Task</p>
+                                        <p className="text-slate-800 dark:text-slate-100 font-bold">{selectedEvent.resource.serviceName}</p>
+                                        <p className="text-xs italic text-slate-500 dark:text-slate-400 mt-1">{selectedEvent.resource.type === 'EVENTUAL' ? 'Eventual Task' : 'Routine Maintenance'}</p>
                                     </div>
                                 </div>
                             )}
-                            <div className="pt-4 border-t border-slate-100 flex justify-end gap-2">
-                                <button className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl transition-colors">
+                            <div className="pt-4 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-2">
+                                <button className="w-full bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold py-2.5 rounded-xl transition-colors">
                                     View Service Details
                                 </button>
                             </div>
