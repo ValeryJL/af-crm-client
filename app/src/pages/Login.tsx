@@ -1,7 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
+
+declare global {
+    interface Window {
+        google: any;
+    }
+}
 
 export function Login() {
     const [email, setEmail] = useState('');
@@ -11,6 +17,62 @@ export function Login() {
     const { login } = useAuth();
     const navigate = useNavigate();
 
+    const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'your-google-client-id';
+
+    useEffect(() => {
+        /* global google */
+        if (window.google) {
+            window.google.accounts.id.initialize({
+                client_id: CLIENT_ID,
+                callback: handleGoogleCallback,
+            });
+            window.google.accounts.id.renderButton(
+                document.getElementById("googleSignInDiv"),
+                {
+                    theme: "outline",
+                    size: "large",
+                    width: "320", // Standard button width
+                    text: "signin_with",
+                    shape: "pill", // Slightly more modern
+                    logo_alignment: "center"
+                }
+            );
+        }
+    }, [CLIENT_ID]);
+
+    const decodeAndLogin = (token: string, emailUsed: string) => {
+        // Minimal JWT payload decoder
+        const payloadBase64 = token.split('.')[1];
+        const payloadJson = atob(payloadBase64.replace(/-/g, '+').replace(/_/g, '/'));
+        const payload = JSON.parse(payloadJson);
+
+        // Extract claims with fallbacks
+        const userData = {
+            email: payload.sub || emailUsed,
+            role: payload.role || payload.roles || (payload.ROLES ? payload.ROLES[0] : 'TECH'),
+            name: payload.name || payload.nombre || payload.sub?.split('@')[0] || 'User',
+            theme: payload.theme || 'light',
+            oauthEnabled: payload.oauthEnabled !== undefined ? payload.oauthEnabled : true
+        };
+
+        login(token, userData);
+        navigate('/');
+    };
+
+    const handleGoogleCallback = async (response: any) => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const res = await apiClient.post('/auth/google', { idToken: response.credential });
+            decodeAndLogin(res.data.token, 'Google User');
+        } catch (err: any) {
+            console.error('Google login failed', err);
+            setError(err.response?.data?.message || 'Google account not registered in system.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
@@ -18,22 +80,7 @@ export function Login() {
 
         try {
             const response = await apiClient.post('/auth/login', { email, password });
-            const { token } = response.data;
-
-            // Minimal JWT payload decoder
-            const payloadBase64 = token.split('.')[1];
-            const payloadJson = atob(payloadBase64.replace(/-/g, '+').replace(/_/g, '/'));
-            const payload = JSON.parse(payloadJson);
-
-            // Extract claims with fallbacks
-            const userData = {
-                email: payload.sub || email,
-                role: payload.role || payload.roles || (payload.ROLES ? payload.ROLES[0] : 'TECH'),
-                name: payload.name || payload.nombre || payload.sub?.split('@')[0] || 'User'
-            };
-
-            login(token, userData);
-            navigate('/');
+            decodeAndLogin(response.data.token, email);
         } catch (err: any) {
             console.error('Login failed', err);
             setError(err.response?.data?.message || 'Invalid email or password.');
@@ -66,7 +113,7 @@ export function Login() {
                 </div>
                 <form className="mt-8 space-y-6" onSubmit={handleLogin}>
                     {error && (
-                        <div className="bg-rose-500/10 border border-rose-500/50 rounded-xl p-3 flex items-center justify-center">
+                        <div className="bg-rose-500/10 border border-rose-500/50 rounded-xl p-3 flex items-center justify-center text-center">
                             <p className="text-sm text-rose-400 font-medium">{error}</p>
                         </div>
                     )}
@@ -131,18 +178,7 @@ export function Login() {
                         </div>
                     </div>
 
-                    <button
-                        type="button"
-                        className="w-full flex justify-center py-3 px-4 border border-slate-600 rounded-xl shadow-sm bg-slate-700/50 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none transition-colors"
-                    >
-                        <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-                        </svg>
-                        Sign in with Google
-                    </button>
+                    <div id="googleSignInDiv" className="w-full flex justify-center"></div>
                 </form>
             </div>
         </div>

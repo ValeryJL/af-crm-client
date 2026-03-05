@@ -1,5 +1,6 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
+import apiClient from '../api/client';
 
 interface AuthContextType {
     token: string | null;
@@ -8,6 +9,7 @@ interface AuthContextType {
     login: (token: string, user: any) => void;
     logout: () => void;
     toggleTheme: () => void;
+    updateUser: (newData: any) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,20 +26,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     // Apply theme to document root
-    if (typeof window !== 'undefined') {
+    useEffect(() => {
         const root = window.document.documentElement;
         if (theme === 'dark') {
             root.classList.add('dark');
         } else {
             root.classList.remove('dark');
         }
-    }
+    }, [theme]);
 
-    const toggleTheme = () => {
+    const toggleTheme = async () => {
         const newTheme = theme === 'light' ? 'dark' : 'light';
         setTheme(newTheme);
         localStorage.setItem('theme', newTheme);
-        // Optionally update the backend here if user is logged in
+
+        if (token) {
+            try {
+                await apiClient.put('/users/me/config', { theme: newTheme });
+                // Use functional update to avoid stale user state
+                setUser((prevUser: any) => {
+                    const updated = { ...prevUser, theme: newTheme };
+                    localStorage.setItem('user', JSON.stringify(updated));
+                    return updated;
+                });
+            } catch (error) {
+                console.error('Failed to persist theme to backend:', error);
+            }
+        }
+    };
+
+    const updateUser = (newData: any) => {
+        setUser((prevUser: any) => {
+            const updated = { ...prevUser, ...newData };
+            localStorage.setItem('user', JSON.stringify(updated));
+            return updated;
+        });
     };
 
     const login = (newToken: string, userData: any) => {
@@ -61,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     return (
-        <AuthContext.Provider value={{ token, user, theme, login, logout, toggleTheme }}>
+        <AuthContext.Provider value={{ token, user, theme, login, logout, toggleTheme, updateUser }}>
             {children}
         </AuthContext.Provider>
     );

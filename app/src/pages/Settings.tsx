@@ -4,21 +4,27 @@ import apiClient from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
 export function Settings() {
-    const { token } = useAuth();
-    const [googleAuthEnabled, setGoogleAuthEnabled] = useState(false);
+    const { user, updateUser } = useAuth();
+    const [oauthEnabled, setOauthEnabled] = useState(user?.oauthEnabled ?? true);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
+    // Sync state with user context if it changes
+    useEffect(() => {
+        if (user?.oauthEnabled !== undefined) {
+            setOauthEnabled(user.oauthEnabled);
+        }
+    }, [user?.oauthEnabled]);
+
     useEffect(() => {
         const fetchConfig = async () => {
             try {
-                // Assuming the backend agent implements this endpoint
                 const response = await apiClient.get('/users/me/config');
-                setGoogleAuthEnabled(response.data.googleAuthEnabled || false);
+                setOauthEnabled(response.data.oauthEnabled);
+                updateUser({ oauthEnabled: response.data.oauthEnabled });
             } catch (error) {
                 console.error('Failed to fetch user configuration:', error);
-                // Graceful fallback if endpoint doesn't exist yet
             } finally {
                 setIsLoading(false);
             }
@@ -27,14 +33,14 @@ export function Settings() {
     }, []);
 
     const handleToggleOAuth = async () => {
-        const newValue = !googleAuthEnabled;
+        const newValue = !oauthEnabled;
         setIsSaving(true);
         setMessage(null);
 
         try {
-            // Assuming the backend agent implements this endpoint
-            await apiClient.put('/users/me/config', { googleAuthEnabled: newValue });
-            setGoogleAuthEnabled(newValue);
+            await apiClient.put('/users/me/config', { oauthEnabled: newValue });
+            setOauthEnabled(newValue);
+            updateUser({ oauthEnabled: newValue });
             setMessage({ type: 'success', text: `Google Authentication ${newValue ? 'enabled' : 'disabled'} successfully.` });
         } catch (error: any) {
             console.error('Failed to update OAuth settings:', error);
@@ -108,11 +114,11 @@ export function Settings() {
                         <button
                             onClick={handleToggleOAuth}
                             disabled={isSaving}
-                            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 ${googleAuthEnabled ? 'bg-indigo-600' : 'bg-slate-200 dark:bg-slate-700'
+                            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 ${oauthEnabled ? 'bg-indigo-600' : 'bg-slate-200 dark:bg-slate-700'
                                 } ${isSaving ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                         >
                             <span
-                                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform ${googleAuthEnabled ? 'translate-x-6' : 'translate-x-1'
+                                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform ${oauthEnabled ? 'translate-x-6' : 'translate-x-1'
                                     }`}
                             />
                         </button>
