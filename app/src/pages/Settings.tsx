@@ -1,45 +1,20 @@
-import { useState, useEffect } from 'react';
-import { Shield, Check, X, AlertCircle } from 'lucide-react';
+import { useState } from 'react';
+import { Shield, Check, X, AlertCircle, Moon, Sun } from 'lucide-react';
 import apiClient from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
 export function Settings() {
-    const { user, updateUser } = useAuth();
-    const [oauthEnabled, setOauthEnabled] = useState(user?.oauthEnabled ?? true);
-    const [isLoading, setIsLoading] = useState(true);
+    const { user, updateUser, theme, toggleTheme } = useAuth();
     const [isSaving, setIsSaving] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
-    // Sync state with user context if it changes
-    useEffect(() => {
-        if (user?.oauthEnabled !== undefined) {
-            setOauthEnabled(user.oauthEnabled);
-        }
-    }, [user?.oauthEnabled]);
-
-    useEffect(() => {
-        const fetchConfig = async () => {
-            try {
-                const response = await apiClient.get('/users/me/config');
-                setOauthEnabled(response.data.oauthEnabled);
-                updateUser({ oauthEnabled: response.data.oauthEnabled });
-            } catch (error) {
-                console.error('Failed to fetch user configuration:', error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchConfig();
-    }, []);
-
     const handleToggleOAuth = async () => {
-        const newValue = !oauthEnabled;
+        const newValue = !user?.oauthEnabled;
         setIsSaving(true);
         setMessage(null);
 
         try {
             await apiClient.put('/users/me/config', { oauthEnabled: newValue });
-            setOauthEnabled(newValue);
             updateUser({ oauthEnabled: newValue });
             setMessage({ type: 'success', text: `Google Authentication ${newValue ? 'enabled' : 'disabled'} successfully.` });
         } catch (error: any) {
@@ -52,14 +27,6 @@ export function Settings() {
             setIsSaving(false);
         }
     };
-
-    if (isLoading) {
-        return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-            </div>
-        );
-    }
 
     return (
         <div className="max-w-4xl mx-auto space-y-8">
@@ -95,6 +62,7 @@ export function Settings() {
                         </div>
                     )}
 
+                    {/* OAuth Section */}
                     <div className="flex items-center justify-between p-6 rounded-2xl bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-700/50 group transition-all">
                         <div className="flex items-center gap-4">
                             <div className="w-12 h-12 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center shadow-sm border border-slate-100 dark:border-slate-700 group-hover:scale-110 transition-transform">
@@ -114,11 +82,36 @@ export function Settings() {
                         <button
                             onClick={handleToggleOAuth}
                             disabled={isSaving}
-                            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 ${oauthEnabled ? 'bg-indigo-600' : 'bg-slate-200 dark:bg-slate-700'
+                            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 ${user?.oauthEnabled ? 'bg-indigo-600' : 'bg-slate-200 dark:bg-slate-700'
                                 } ${isSaving ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                         >
                             <span
-                                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform ${oauthEnabled ? 'translate-x-6' : 'translate-x-1'
+                                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform ${user?.oauthEnabled ? 'translate-x-6' : 'translate-x-1'
+                                    }`}
+                            />
+                        </button>
+                    </div>
+
+                    {/* Theme Section */}
+                    <div className="flex items-center justify-between p-6 rounded-2xl bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-700/50 group transition-all">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center shadow-sm border border-slate-100 dark:border-slate-700 group-hover:scale-110 transition-transform text-indigo-600 dark:text-indigo-400">
+                                {theme === 'dark' ? <Moon size={24} /> : <Sun size={24} />}
+                            </div>
+                            <div className="space-y-1">
+                                <h4 className="font-bold text-slate-900 dark:text-white">Appearance</h4>
+                                <p className="text-sm text-slate-500 dark:text-slate-400">Switch between light and dark visual themes.</p>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={toggleTheme}
+                            disabled={isSaving}
+                            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 ${theme === 'dark' ? 'bg-indigo-600' : 'bg-slate-200 dark:bg-slate-700'
+                                } ${isSaving ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                        >
+                            <span
+                                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform ${theme === 'dark' ? 'translate-x-6' : 'translate-x-1'
                                     }`}
                             />
                         </button>
@@ -129,7 +122,7 @@ export function Settings() {
                             <AlertCircle size={18} className="shrink-0 mt-0.5" />
                             <div className="text-sm">
                                 <p className="font-bold mb-1">Important Note</p>
-                                <p>To use Google Sign-In, your account email must match your Google account exactly. Unauthorized domains will be restricted by the system administrator.</p>
+                                <p>Preferences like theme and authentication type are saved to your profile and will be applied on all your devices.</p>
                             </div>
                         </div>
                     </div>

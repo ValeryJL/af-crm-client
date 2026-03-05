@@ -22,8 +22,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     const [theme, setTheme] = useState<'light' | 'dark'>(() => {
         const savedTheme = localStorage.getItem('theme');
+        const savedUser = localStorage.getItem('user');
+        if (savedUser) {
+            const userObj = JSON.parse(savedUser);
+            if (userObj.theme) return userObj.theme;
+        }
         return (savedTheme as 'light' | 'dark') || 'light';
     });
+
+    // Fetch latest config from backend on mount/reload
+    useEffect(() => {
+        const fetchLatestConfig = async () => {
+            if (!token) return;
+            try {
+                const response = await apiClient.get('/users/me/config');
+                const config = response.data;
+
+                // Sync theme
+                if (config.theme) {
+                    setTheme(config.theme);
+                    localStorage.setItem('theme', config.theme);
+                }
+
+                // Sync full user object
+                setUser((prev: any) => {
+                    const updated = { ...prev, ...config };
+                    localStorage.setItem('user', JSON.stringify(updated));
+                    return updated;
+                });
+            } catch (error) {
+                console.error('Failed to sync user config with backend:', error);
+            }
+        };
+
+        fetchLatestConfig();
+    }, [token]);
 
     // Apply theme to document root
     useEffect(() => {
@@ -59,6 +92,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser((prevUser: any) => {
             const updated = { ...prevUser, ...newData };
             localStorage.setItem('user', JSON.stringify(updated));
+            // If theme is updated, also update the theme state
+            if (newData.theme) {
+                setTheme(newData.theme);
+                localStorage.setItem('theme', newData.theme);
+            }
             return updated;
         });
     };
