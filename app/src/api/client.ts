@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// Dynamically point to the same host but on port 8080 for the API
-const apiBaseUrl = `http://${window.location.hostname}:8080/api`;
+// Use a relative path so the browser sends it to the same origin (Nginx or Vite proxy)
+const apiBaseUrl = '/api';
 
 const apiClient = axios.create({
     baseURL: apiBaseUrl,

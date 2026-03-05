@@ -8,6 +8,8 @@ services:
     ports:
       - "3000:80"
     restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:172.19.0.1"
     # Depending on how the backend docker is set up, you might want to attach this to a shared network
     # networks:
     #   - af-crm-network
