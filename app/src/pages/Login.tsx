@@ -25,11 +25,11 @@ export function Login() {
             const payloadJson = atob(payloadBase64.replace(/-/g, '+').replace(/_/g, '/'));
             const payload = JSON.parse(payloadJson);
 
-            // Extract typical claims
+            // Extract claims with fallbacks
             const userData = {
                 email: payload.sub || email,
-                role: payload.role || payload.roles || 'UNKNOWN',
-                name: payload.name || payload.sub?.split('@')[0] || 'User'
+                role: payload.role || payload.roles || (payload.ROLES ? payload.ROLES[0] : 'TECH'),
+                name: payload.name || payload.nombre || payload.sub?.split('@')[0] || 'User'
             };
 
             login(token, userData);
