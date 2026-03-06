@@ -17,7 +17,7 @@ export function Setup() {
         apellido: '',
         telefono: '',
         theme: 'light',
-        role: 'ADMIN'
+        role: 'SUPER_ADMIN'
     });
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -36,7 +36,7 @@ export function Setup() {
 
             const userData = {
                 email: payload.sub || formData.email,
-                role: 'ADMIN',
+                role: 'SUPER_ADMIN',
                 name: payload.name || payload.nombre || formData.nombre
             };
 

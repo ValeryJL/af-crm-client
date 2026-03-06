@@ -10,6 +10,12 @@ export function MainLayout() {
     const { user, logout, theme, toggleTheme } = useAuth();
     const navigate = useNavigate();
 
+    const getRoleDisplayName = (role: string | undefined) => {
+        if (!role) return 'Guest';
+        if (role === 'SUPER_ADMIN') return 'Super Admin';
+        return role.replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+    };
+
     // Close dropdown on click outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -45,7 +51,7 @@ export function MainLayout() {
                 <div className="flex items-center gap-4 relative" ref={dropdownRef}>
                     <div className="hidden sm:flex flex-col text-right">
                         <p className="font-bold text-sm text-slate-800 dark:text-slate-200 tracking-tight">{user?.name || 'User'}</p>
-                        <p className="text-indigo-600 dark:text-indigo-400 text-[10px] font-black tracking-widest uppercase">{user?.role || 'Guest'}</p>
+                        <p className="text-indigo-600 dark:text-indigo-400 text-[10px] font-black tracking-widest">{getRoleDisplayName(user?.role)}</p>
                     </div>
 
                     <button
@@ -101,9 +107,9 @@ export function MainLayout() {
                             <LayoutDashboard size={20} className="text-slate-400 group-hover:text-indigo-400 transition-colors" />
                             <span>Dashboard</span>
                         </Link>
-                        <Link to="/technicians" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 dark:hover:bg-slate-900 hover:text-white font-medium transition-all group">
+                        <Link to="/users" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 dark:hover:bg-slate-900 hover:text-white font-medium transition-all group">
                             <User size={20} className="text-slate-400 group-hover:text-amber-400 transition-colors" />
-                            <span>Technicians</span>
+                            <span>Users</span>
                         </Link>
                         <Link to="/services" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 dark:hover:bg-slate-900 hover:text-white font-medium transition-all group">
                             <Wrench size={20} className="text-slate-400 group-hover:text-emerald-400 transition-colors" />

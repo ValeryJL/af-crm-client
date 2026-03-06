@@ -7,10 +7,11 @@ import { MainLayout } from './layouts/MainLayout.tsx'
 import { Dashboard } from './pages/Dashboard.tsx'
 import { Login } from './pages/Login.tsx'
 import { Setup } from './pages/Setup.tsx'
-import { Technicians } from './pages/Technicians.tsx'
+import { Technicians as Users } from './pages/Technicians.tsx'
 import { Services } from './pages/Services.tsx'
 import { CalendarView } from './pages/CalendarView.tsx'
 import { Settings } from './pages/Settings.tsx'
+import { RegisterInvited } from './pages/RegisterInvitedPage.tsx'
 import { useAuth } from './context/AuthContext.tsx'
 import apiClient from './api/client'
 import type { ReactNode } from 'react'
@@ -56,9 +57,10 @@ createRoot(document.getElementById('root')!).render(
           <Routes>
             <Route path="/setup" element={<Setup />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<RegisterInvited />} />
             <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
               <Route index element={<Dashboard />} />
-              <Route path="/technicians" element={<Technicians />} />
+              <Route path="/users" element={<Users />} />
               <Route path="/services" element={<Services />} />
               <Route path="/calendar" element={<CalendarView />} />
               <Route path="/settings" element={<Settings />} />

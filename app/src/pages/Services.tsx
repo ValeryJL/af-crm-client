@@ -29,7 +29,7 @@ export function Services() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [editingServiceId, setEditingServiceId] = useState<number | null>(null);
     const { user } = useAuth();
-    const isAdmin = user?.role === 'ADMIN';
+    const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
 
     // Form State
     const [formData, setFormData] = useState({
