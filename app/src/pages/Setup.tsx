@@ -27,17 +27,19 @@ export function Setup() {
 
         try {
             const response = await apiClient.post('/auth/register-admin', formData);
-            const { token } = response.data;
+            const data = response.data;
+            const token = data.token;
 
-            // Extract metadata from JWT (similar to Login.tsx)
+            // Extract metadata from response first, fallback to JWT decoding, then to form data
             const payloadBase64 = token.split('.')[1];
             const payloadJson = atob(payloadBase64.replace(/-/g, '+').replace(/_/g, '/'));
             const payload = JSON.parse(payloadJson);
 
             const userData = {
-                email: payload.sub || formData.email,
-                role: 'SUPER_ADMIN',
-                name: payload.name || payload.nombre || formData.nombre
+                email: data.email || payload.sub || formData.email,
+                role: data.role || payload.role || 'SUPER_ADMIN',
+                name: data.name || data.nombre || payload.name || payload.nombre || formData.nombre,
+                theme: data.theme || payload.theme || 'light'
             };
 
             login(token, userData);

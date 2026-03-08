@@ -49,19 +49,19 @@ export function Login() {
         }
     }, [CLIENT_ID]);
 
-    const decodeAndLogin = (token: string, emailUsed: string) => {
-        // Minimal JWT payload decoder
+    const processLogin = (token: string, emailUsed: string, metadata?: any) => {
+        // Minimal JWT payload decoder as fallback
         const payloadBase64 = token.split('.')[1];
         const payloadJson = atob(payloadBase64.replace(/-/g, '+').replace(/_/g, '/'));
         const payload = JSON.parse(payloadJson);
 
-        // Extract claims with fallbacks
+        // Extract claims prioritizing direct response metadata, then JWT, then defaults
         const userData = {
-            email: payload.sub || emailUsed,
-            role: payload.role || payload.roles || (payload.ROLES ? payload.ROLES[0] : 'TECH'),
-            name: payload.name || payload.nombre || payload.sub?.split('@')[0] || 'User',
-            theme: payload.theme || 'light',
-            oauthEnabled: payload.oauthEnabled !== undefined ? payload.oauthEnabled : true
+            email: metadata?.email || payload.sub || emailUsed,
+            role: metadata?.role || payload.role || payload.roles || (payload.ROLES ? payload.ROLES[0] : 'TECH'),
+            name: metadata?.name || metadata?.nombre || payload.name || payload.nombre || payload.sub?.split('@')[0] || 'User',
+            theme: metadata?.theme || payload.theme || 'light',
+            oauthEnabled: metadata?.oauthEnabled !== undefined ? metadata?.oauthEnabled : (payload.oauthEnabled !== undefined ? payload.oauthEnabled : true)
         };
 
         login(token, userData);
@@ -73,7 +73,7 @@ export function Login() {
         setError(null);
         try {
             const res = await apiClient.post('/auth/google', { idToken: response.credential });
-            decodeAndLogin(res.data.token, 'Google User');
+            processLogin(res.data.token, 'Google User', res.data);
         } catch (err: any) {
             console.error('Google login failed', err);
             setError(err.response?.data?.message || 'Google account not registered in system.');
@@ -89,7 +89,7 @@ export function Login() {
 
         try {
             const response = await apiClient.post('/auth/login', { email, password });
-            decodeAndLogin(response.data.token, email);
+            processLogin(response.data.token, email, response.data);
         } catch (err: any) {
             console.error('Login failed', err);
             setError(err.response?.data?.message || 'Invalid email or password.');

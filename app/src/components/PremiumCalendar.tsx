@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isSameMonth, isSameDay, eachDayOfInterval, addDays, startOfDay, addHours } from 'date-fns';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Loader2, X, Clock, Trash2, CheckCircle2, ExternalLink, AlertCircle } from 'lucide-react';
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isSameMonth, isSameDay, eachDayOfInterval, addDays, startOfDay, addHours, isWithinInterval } from 'date-fns';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Loader2, X, Clock, Trash2, CheckCircle2, ExternalLink, AlertCircle, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import './Calendar.css';
 import apiClient from '../api/client';
@@ -13,10 +13,11 @@ interface CalendarItem {
     end?: Date;
     allDay: boolean;
     type: 'EVENT' | 'TASK';
-    status?: 'UNASSIGNED' | 'PENDING' | 'RESOLVED' | 'OVERDUE' | 'DONE'; // Support both new and legacy status for compatibility
+    status?: 'UNASSIGNED' | 'PENDING' | 'RESOLVED' | 'OVERDUE' | 'DONE';
     scheduledDate?: Date;
     color?: string;
     serviceId?: number;
+    periodDate?: string;
 }
 
 interface PremiumCalendarProps {
@@ -28,13 +29,18 @@ type CalendarView = 'month' | 'week' | 'agenda';
 export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger = 0 }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [items, setItems] = useState<CalendarItem[]>([]);
+    const [unassignedTasks, setUnassignedTasks] = useState<CalendarItem[]>([]);
     const [loading, setLoading] = useState(false);
-    const [view, setView] = useState<CalendarView>('month');
+    const [view, setView] = useState<CalendarView>('week');
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
     const [selectedItem, setSelectedItem] = useState<CalendarItem | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const navigate = useNavigate();
+
+    // Drag and Drop state
+    const [draggedTask, setDraggedTask] = useState<CalendarItem | null>(null);
+    const [dragOverCell, setDragOverCell] = useState<string | null>(null);
 
     // Form states
     const [formData, setFormData] = useState({
@@ -49,12 +55,12 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
     });
     const [availableServices, setAvailableServices] = useState<any[]>([]);
 
-    // Auto-detect responsive view on mount
     useEffect(() => {
         const isMobile = window.innerWidth < 768;
-        setView(isMobile ? 'agenda' : 'week');
+        if (isMobile) {
+            setView('agenda');
+        }
     }, []);
-
 
     useEffect(() => {
         fetchData();
@@ -75,62 +81,140 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
         try {
             let start, end;
             if (view === 'month') {
-                start = startOfWeek(startOfMonth(currentDate));
-                end = endOfWeek(endOfMonth(currentDate));
+                start = startOfWeek(startOfMonth(currentDate), { weekStartsOn: 1 });
+                end = endOfWeek(endOfMonth(currentDate), { weekStartsOn: 1 });
             } else if (view === 'week') {
-                start = startOfWeek(currentDate);
-                end = endOfWeek(currentDate);
+                start = startOfWeek(currentDate, { weekStartsOn: 1 });
+                end = endOfWeek(currentDate, { weekStartsOn: 1 });
             } else {
-                // Agenda: current day to end of week
                 start = startOfDay(currentDate);
                 end = addDays(start, 7);
             }
 
-            const response = await apiClient.get('/calendar/events/all', {
-                params: {
-                    start: start.toISOString(),
-                    end: end.toISOString(),
-                }
-            });
+            const rangeParams = {
+                start: format(start, 'yyyy-MM-dd'),
+                end: format(end, 'yyyy-MM-dd'),
+            };
 
-            const mappedEvents: CalendarItem[] = response.data.events.map((e: any) => ({
-                id: e.id,
-                title: e.title,
-                description: e.description,
-                start: new Date(e.start),
-                end: new Date(e.end),
-                allDay: e.allDay,
-                type: 'EVENT',
-                status: e.status,
-                color: e.color || '#6366f1'
-            }));
+            // Fetch unassigned for the WHOLE MONTH to ensure Monthly/15-day tasks
+            // are visible in any week of the month.
+            const unassignedRange = {
+                start: format(startOfMonth(currentDate), 'yyyy-MM-dd'),
+                end: format(endOfMonth(currentDate), 'yyyy-MM-dd'),
+            };
 
-            const mappedTasks: CalendarItem[] = response.data.tasks.map((t: any) => {
-                const dateVal = t.fechaProgramada || t.scheduledDate;
-                const scheduledDate = dateVal ? new Date(dateVal) : null;
-                const status = t.status as CalendarItem['status'];
-                const isOverdue = status === 'PENDING' && scheduledDate && scheduledDate < new Date();
+            const [allRes, unassignedRes] = await Promise.allSettled([
+                apiClient.get('/calendar', { params: rangeParams }),
+                apiClient.get('/calendar/tasks/unassigned', { params: unassignedRange })
+            ]);
 
-                return {
+            let mappedEvents: CalendarItem[] = [];
+            let mappedAssignedTasks: CalendarItem[] = [];
+            let mappedUnassignedTasks: CalendarItem[] = [];
+
+            // 1. Process Assigned Events & Tasks
+            if (allRes.status === 'fulfilled') {
+                const data = allRes.value.data;
+                console.log('Calendar Data Received:', data);
+
+                // Handle both structured {events, tasks} and flat array responses
+                const isStructured = data && (data.events || data.tasks);
+
+                // If structured, use explicitly named lists. If flat, split by property/type.
+                const rawEvents = isStructured ? (data.events || []) : (Array.isArray(data) ? data.filter((item: any) => item.type === 'EVENT' || (!item.serviceId && !item.idServicio && !item.fechaProgramada)) : []);
+                const rawTasks = isStructured ? (data.tasks || []) : (Array.isArray(data) ? data.filter((item: any) => item.type === 'TASK' || item.serviceId || item.idServicio || item.fechaProgramada || item.scheduledDate) : []);
+
+                mappedEvents = rawEvents.map((e: any) => {
+                    const dateVal = e.start || e.fecha || e.fechaProgramada || e.scheduledDate || e.date;
+                    const startDate = dateVal ? new Date(dateVal) : new Date();
+
+                    return {
+                        id: e.id,
+                        title: e.title || e.nombre || 'Event',
+                        description: e.description || e.observaciones || '',
+                        start: startDate,
+                        end: e.end ? new Date(e.end) : undefined,
+                        allDay: e.allDay ?? false,
+                        type: 'EVENT',
+                        status: e.status,
+                        color: e.color || '#6366f1'
+                    };
+                }).filter((e: any) => !isNaN(e.start.getTime()));
+
+                mappedAssignedTasks = rawTasks.map((t: any) => {
+                    const dateVal = t.fechaProgramada || t.scheduledDate || t.fecha || t.date;
+                    const scheduledDate = dateVal ? new Date(dateVal) : null;
+                    const status = (t.status || 'PENDING').toString().toUpperCase() as CalendarItem['status'];
+                    const isOverdue = status === 'PENDING' && scheduledDate && scheduledDate < new Date();
+
+                    return {
+                        id: t.id,
+                        title: t.serviceName || t.nombre || t.title || t.cliente || 'Technical Visit',
+                        description: t.description || `Client: ${t.cliente || t.clientName || 'N/A'} | Equipment: ${t.equipo || t.equipment || 'N/A'}`,
+                        start: scheduledDate || new Date(0),
+                        allDay: !dateVal,
+                        type: 'TASK',
+                        status: isOverdue ? 'OVERDUE' : status,
+                        color: status === 'RESOLVED' || status === 'DONE' ? '#10b981' : (isOverdue || status === 'OVERDUE' ? '#ef4444' : '#3b82f6'),
+                        serviceId: t.serviceId || t.idServicio,
+                        scheduledDate: scheduledDate || undefined,
+                        periodDate: t.periodDate
+                    };
+                }).filter((t: any) => t.start.getTime() > 0);
+            }
+
+            // 2. Process Unassigned Tasks
+            if (unassignedRes.status === 'fulfilled') {
+                const data = unassignedRes.value.data;
+                const unassignedList = Array.isArray(data) ? data : (Array.isArray(data.tasks) ? data.tasks : []);
+
+                mappedUnassignedTasks = unassignedList.map((t: any) => ({
                     id: t.id,
-                    title: t.serviceName,
-                    description: `Client: ${t.cliente} | Equipment: ${t.equipo}`,
-                    // Only set start if we have a real date, otherwise it won't show in grid
-                    start: scheduledDate || new Date(0),
-                    allDay: !dateVal,
+                    title: t.serviceName || t.nombre || t.title || 'Floating Task',
+                    description: t.description || `Client: ${t.cliente || t.clientName || 'N/A'} | Equipment: ${t.equipo || t.equipment || 'N/A'}`,
+                    start: t.periodDate ? new Date(t.periodDate) : new Date(),
+                    allDay: true,
                     type: 'TASK',
-                    status: isOverdue ? 'OVERDUE' : status,
-                    color: status === 'RESOLVED' || status === 'DONE' ? '#10b981' : (isOverdue || status === 'OVERDUE' ? '#ef4444' : (status === 'UNASSIGNED' ? '#f59e0b' : '#3b82f6')),
-                    serviceId: t.serviceId,
-                    scheduledDate: scheduledDate || undefined
-                };
-            });
+                    status: 'UNASSIGNED',
+                    color: '#f59e0b',
+                    serviceId: t.serviceId || t.idServicio,
+                    periodDate: t.periodDate
+                })).filter((t: any) => {
+                    // Smart filtering: Decide if this unassigned task should be visible in CURRENT VIEW
+                    if (!t.periodDate) return true;
+                    const pDate = new Date(t.periodDate);
 
-            // Filter out tasks with no date (year 1970) for the grid views
-            setItems([...mappedEvents, ...mappedTasks].filter(item => item.start.getTime() > 0 || view === 'agenda'));
+                    // 1. If it's a Weekly task (periodDate is within visible week)
+                    if (isWithinInterval(pDate, { start, end })) return true;
+
+                    // 2. If it's a Monthly or 15-day task (Long periods)
+                    const dayNum = pDate.getDate();
+                    if (dayNum === 1 || dayNum === 16) {
+                        // Monthly (Day 1): Show in all weeks of the same month
+                        if (dayNum === 1 && isSameMonth(pDate, currentDate)) return true;
+
+                        // Quincenal (Day 16): Show only in the second half of the month
+                        // (We check if our current view's start date is on or after the 16th,
+                        // or if any day in our visible week range is >= 16)
+                        if (dayNum === 16 && isSameMonth(pDate, currentDate)) {
+                            const endDay = end.getDate();
+                            return endDay >= 16;
+                        }
+                    }
+
+                    return false;
+                });
+            }
+
+            setItems([...mappedEvents, ...mappedAssignedTasks]);
+            setUnassignedTasks(mappedUnassignedTasks);
+
+            console.log(`Loaded ${mappedEvents.length} events, ${mappedAssignedTasks.length} assigned tasks, and ${mappedUnassignedTasks.length} unassigned tasks.`);
+
         } catch (error) {
             console.error('Error fetching calendar data:', error);
             setItems([]);
+            setUnassignedTasks([]);
         } finally {
             setLoading(false);
         }
@@ -148,12 +232,64 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
         else setCurrentDate(addDays(currentDate, -1));
     };
 
+    // Drag and Drop Handlers
+    const handleDragStart = (task: CalendarItem) => {
+        setDraggedTask(task);
+    };
+
+    const handleDragOver = (e: React.DragEvent, cellId: string) => {
+        e.preventDefault();
+        setDragOverCell(cellId);
+    };
+
+    const handleDrop = async (date: Date) => {
+        setDragOverCell(null);
+        if (!draggedTask) return;
+
+        setIsSaving(true);
+        try {
+            const localIsoDate = format(date, "yyyy-MM-dd'T'HH:mm:ss");
+
+            if (draggedTask.type === 'TASK') {
+                const isUnassigned = draggedTask.status === 'UNASSIGNED';
+                const endpoint = isUnassigned
+                    ? `/calendar/services/${draggedTask.serviceId}/assign-smart`
+                    : `/calendar/tasks/${draggedTask.id}/reprogram`;
+
+                await apiClient.patch(endpoint, {
+                    fechaProgramada: localIsoDate,
+                    newDate: localIsoDate
+                });
+            } else if (draggedTask.type === 'EVENT') {
+                // For regular events, we use the standard PUT update
+                // We preserve original metadata while updating the start/end
+                const duration = draggedTask.end ? draggedTask.end.getTime() - draggedTask.start.getTime() : 3600000; // default 1h
+                const newEnd = new Date(date.getTime() + duration);
+
+                await apiClient.put(`/calendar/events/${draggedTask.id}`, {
+                    title: draggedTask.title,
+                    description: draggedTask.description,
+                    start: localIsoDate,
+                    end: format(newEnd, "yyyy-MM-dd'T'HH:mm:ss"),
+                    allDay: draggedTask.allDay,
+                    color: draggedTask.color
+                });
+            }
+
+            setDraggedTask(null);
+            fetchData();
+        } catch (error) {
+            console.error('Drop failed:', error);
+            alert('Failed to update schedule. Please try again.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     const handleDayClick = (date: Date) => {
-        // Default to current hour + 1 for start time
         const start = new Date(date);
         const now = new Date();
         start.setHours(now.getHours() + 1, 0, 0, 0);
-
         const end = addHours(start, 1);
 
         setFormData({
@@ -175,11 +311,11 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
         setFormData({
             title: item.title,
             description: item.description || '',
-            start: format(item.start, "yyyy-MM-dd'T'HH:mm"),
+            start: item.start.getTime() > 0 ? format(item.start, "yyyy-MM-dd'T'HH:mm") : format(new Date(), "yyyy-MM-dd'T'HH:mm"),
             end: item.end ? format(item.end, "yyyy-MM-dd'T'HH:mm") : '',
             allDay: item.allDay,
             type: item.type,
-            taskType: 'MAINTENANCE', // Tasks from backend have types, but events don't
+            taskType: 'MAINTENANCE',
             serviceId: item.serviceId || ''
         });
         setShowEditModal(true);
@@ -195,13 +331,13 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
                 }
                 await apiClient.post(`/services/${formData.serviceId}/tasks/manual`, {
                     type: formData.taskType,
-                    fechaProgramada: new Date(formData.start).toISOString()
+                    fechaProgramada: formData.start // Use local string directly
                 });
             } else {
                 await apiClient.post('/calendar/events', {
                     title: formData.title,
                     description: formData.description,
-                    start: formData.start, // Send raw local string for backend consistency
+                    start: formData.start,
                     end: formData.end || null,
                     allDay: formData.allDay
                 });
@@ -220,14 +356,23 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
         if (!selectedItem || selectedItem.type !== 'TASK') return;
         setIsSaving(true);
         try {
-            await apiClient.patch(`/calendar/tasks/${selectedItem.id}/reprogram`, {
-                newDate: formData.start // Send local string
+            // Use the direct local value from input to avoid timezone shift (+3h problem)
+            const targetDate = formData.start;
+
+            const isUnassigned = selectedItem.status === 'UNASSIGNED';
+            const endpoint = isUnassigned
+                ? `/calendar/services/${selectedItem.serviceId}/assign-smart`
+                : `/calendar/tasks/${selectedItem.id}/reprogram`;
+
+            await apiClient.patch(endpoint, {
+                fechaProgramada: targetDate,
+                newDate: targetDate
             });
             setShowEditModal(false);
             fetchData();
         } catch (error) {
             console.error('Error reprogramming task:', error);
-            alert('Failed to reprogram task');
+            alert('Failed to reprogram task. Please ensure the date/time is valid.');
         } finally {
             setIsSaving(false);
         }
@@ -275,7 +420,7 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
 
     const handleToggleTaskStatus = async () => {
         if (!selectedItem || selectedItem.type !== 'TASK') return;
-        const newStatus = selectedItem.status === 'RESOLVED' ? 'PENDING' : 'RESOLVED';
+        const newStatus = (selectedItem.status === 'RESOLVED' || selectedItem.status === 'DONE') ? 'PENDING' : 'RESOLVED';
 
         setIsSaving(true);
         try {
@@ -330,10 +475,51 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
         </div>
     );
 
+    const renderPlanningBar = () => {
+        if (view === 'agenda') return null;
+
+        return (
+            <div className="planning-bar">
+                <div className="planning-bar-header">
+                    <div className="planning-bar-title">
+                        <Sparkles size={14} className="text-amber-500" />
+                        Smart Planning: Floating Tasks
+                        <span className="ml-2 px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 rounded-full text-[10px]">
+                            {unassignedTasks.length}
+                        </span>
+                    </div>
+                </div>
+                <div className="unassigned-tasks-list">
+                    {unassignedTasks.length > 0 ? (
+                        unassignedTasks.map(task => (
+                            <div
+                                key={`unassigned-${task.id}`}
+                                draggable
+                                onDragStart={() => handleDragStart(task)}
+                                onClick={(e) => handleItemClick(e, task)}
+                                className="unassigned-task-card"
+                            >
+                                <div className="unassigned-task-name">{task.title}</div>
+                                <div className="unassigned-task-client">{task.description?.split('|')[0]}</div>
+                                <div className="text-[9px] font-bold text-indigo-500 uppercase mt-1">
+                                    {task.periodDate ? `Cycle: ${format(new Date(task.periodDate), 'MMM yyyy')}` : 'Ready to assign'}
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="flex items-center justify-center w-full py-2 text-slate-400 text-xs italic font-medium">
+                            No unassigned tasks found for this period.
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    };
+
     const renderMonthCells = () => {
         const monthStart = startOfMonth(currentDate);
-        const startDate = startOfWeek(monthStart);
-        const endDate = endOfWeek(endOfMonth(monthStart));
+        const startDate = startOfWeek(monthStart, { weekStartsOn: 1 });
+        const endDate = endOfWeek(endOfMonth(monthStart), { weekStartsOn: 1 });
         const allDays = eachDayOfInterval({ start: startDate, end: endDate });
 
         return (
@@ -342,18 +528,24 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
                     {allDays.map((d) => {
                         const isCurrentMonth = isSameMonth(d, monthStart);
                         const dayItems = items.filter(item => isSameDay(item.start, d));
+                        const cellId = `month-${d.getTime()}`;
 
                         return (
                             <div
                                 key={d.toString()}
-                                className={`calendar-day ${!isCurrentMonth ? "other-month" : ""} ${isSameDay(d, new Date()) ? "is-today" : ""}`}
+                                className={`calendar-day ${!isCurrentMonth ? "other-month" : ""} ${isSameDay(d, new Date()) ? "is-today" : ""} ${dragOverCell === cellId ? 'drag-over' : ''}`}
                                 onClick={() => handleDayClick(d)}
+                                onDragOver={(e) => handleDragOver(e, cellId)}
+                                onDragLeave={() => setDragOverCell(null)}
+                                onDrop={() => handleDrop(d)}
                             >
                                 <span className="day-number">{format(d, 'd')}</span>
                                 <div className="events-container">
                                     {dayItems.map((item: CalendarItem) => (
                                         <div
                                             key={`${item.type}-${item.id}`}
+                                            draggable
+                                            onDragStart={() => handleDragStart(item)}
                                             className={`event-item ${item.type.toLowerCase()} ${item.status === 'OVERDUE' ? 'urgent ripple' : ''}`}
                                             title={`${item.title}${item.status === 'OVERDUE' ? ' - MISSING REPORT!' : ''}`}
                                             style={item.color ? { borderLeftColor: item.color } : {}}
@@ -368,11 +560,6 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
                                                 </span>
                                                 {item.title}
                                             </div>
-                                            {item.status === 'OVERDUE' && (
-                                                <div className="text-[10px] font-black text-rose-500 mt-1 uppercase tracking-tighter animate-pulse">
-                                                    Missing Report
-                                                </div>
-                                            )}
                                         </div>
                                     ))}
                                 </div>
@@ -385,17 +572,14 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
     };
 
     const renderWeekCells = () => {
-        const startDate = startOfWeek(currentDate);
-        const days = eachDayOfInterval({ start: startDate, end: endOfWeek(currentDate) });
+        const startDate = startOfWeek(currentDate, { weekStartsOn: 1 });
+        const days = eachDayOfInterval({ start: startDate, end: endOfWeek(currentDate, { weekStartsOn: 1 }) });
         const hours = Array.from({ length: 24 }).map((_, i) => i);
 
         return (
             <div className="calendar-scroll-wrapper week-scroll-wrapper">
                 <div className="calendar-days week-view">
-                    {/* Corner empty cell */}
                     <div className="time-col-header"></div>
-
-                    {/* Days Headers */}
                     {days.map(d => (
                         <div key={`header-${d.toString()}`} className={`day-header-cell ${isSameDay(d, new Date()) ? "is-today" : ""}`}>
                             <span className="day-name">{format(d, 'EEE')}</span>
@@ -403,7 +587,6 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
                         </div>
                     ))}
 
-                    {/* Time Grid */}
                     {hours.map(hour => (
                         <React.Fragment key={`hour-row-${hour}`}>
                             <div className="time-label">
@@ -412,6 +595,7 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
                             {days.map(d => {
                                 const cellDate = new Date(d);
                                 cellDate.setHours(hour, 0, 0, 0);
+                                const cellId = `week-${d.getTime()}-${hour}`;
 
                                 const cellItems = items.filter(item =>
                                     isSameDay(item.start, d) && item.start.getHours() === hour
@@ -419,14 +603,19 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
 
                                 return (
                                     <div
-                                        key={`cell-${d.toString()}-${hour}`}
-                                        className="week-grid-cell"
+                                        key={cellId}
+                                        className={`week-grid-cell ${dragOverCell === cellId ? 'drag-over' : ''}`}
                                         onClick={() => handleDayClick(cellDate)}
+                                        onDragOver={(e) => handleDragOver(e, cellId)}
+                                        onDragLeave={() => setDragOverCell(null)}
+                                        onDrop={() => handleDrop(cellDate)}
                                     >
                                         <div className="events-container">
                                             {cellItems.map((item: CalendarItem) => (
                                                 <div
                                                     key={`${item.type}-${item.id}`}
+                                                    draggable
+                                                    onDragStart={() => handleDragStart(item)}
                                                     className={`event-item ${item.type.toLowerCase()} ${item.status === 'RESOLVED' ? 'opacity-50 line-through' : ''}`}
                                                     style={{ borderLeftColor: item.color }}
                                                     onClick={(e) => handleItemClick(e, item)}
@@ -436,7 +625,6 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
                                                         {item.status === 'RESOLVED' && <CheckCircle2 size={10} className="text-emerald-500" />}
                                                         {item.title}
                                                     </div>
-                                                    <div className="text-[10px] opacity-70">{item.description}</div>
                                                 </div>
                                             ))}
                                         </div>
@@ -452,7 +640,7 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
 
     const renderAgendaView = () => (
         <div className="agenda-view p-6 space-y-6 overflow-y-auto">
-            {items.sort((a: CalendarItem, b: CalendarItem) => a.start.getTime() - b.start.getTime()).map((item: CalendarItem) => (
+            {items.sort((a, b) => a.start.getTime() - b.start.getTime()).map(item => (
                 <div key={`${item.type}-${item.id}`} className="agenda-item flex gap-4 p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/80" onClick={(e) => handleItemClick(e, item)}>
                     <div className="agenda-date flex flex-col items-center justify-center min-w-[60px] border-r border-slate-100 dark:border-slate-700 pr-4">
                         <span className="text-xs font-bold text-indigo-500 uppercase">{format(item.start, 'EEE')}</span>
@@ -488,7 +676,7 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
         <div className="premium-calendar">
             {renderHeader()}
             <div className={`calendar-grid view-mode-${view}`}>
-                {/* Weekdays header is only needed for month view now, week view has it built in */}
+                {renderPlanningBar()}
                 {view === 'month' && (
                     <div className="calendar-weekdays">
                         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
@@ -500,6 +688,7 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
                 {view === 'week' && renderWeekCells()}
                 {view === 'agenda' && renderAgendaView()}
             </div>
+
             {/* Create Event Modal */}
             {showCreateModal && (
                 <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
@@ -603,7 +792,7 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
                         <div className="modal-footer">
                             <button className="btn btn-secondary" onClick={() => setShowCreateModal(false)}>Cancel</button>
                             <button
-                                className="btn btn-primary"
+                                className="btn btn-primary font-bold"
                                 onClick={handleSaveEvent}
                                 disabled={isSaving || (formData.type === 'EVENT' ? !formData.title : !formData.serviceId)}
                             >

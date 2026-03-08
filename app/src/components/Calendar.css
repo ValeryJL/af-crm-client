@@ -3,13 +3,13 @@
   --calendar-bg: rgba(255, 255, 255, 0.8);
   --calendar-border: #e2e8f0;
   --header-height: 80px;
-  --day-min-height: 120px;
+  --day-min-height: 150px;
   --primary-color: #6366f1;
   --secondary-color: #f8fafc;
   --text-main: #1e293b;
   --text-muted: #64748b;
   --today-bg: #eef2ff;
-  --event-radius: 4px;
+  --event-radius: 6px;
 }
 
 .dark {
@@ -649,4 +649,116 @@
 .btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* Planning Bar Styles */
+.planning-bar {
+  padding: 16px 24px;
+  background: var(--secondary-color);
+  border-bottom: 3px solid var(--primary-color);
+  border-top: 1px solid var(--calendar-border);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex-shrink: 0;
+  min-height: 110px;
+}
+
+.planning-bar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.planning-bar-title {
+  font-size: 0.85rem;
+  font-weight: 900;
+  color: var(--primary-color);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.unassigned-tasks-list {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 4px 0 8px 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.unassigned-tasks-list::-webkit-scrollbar {
+  height: 4px;
+}
+
+.unassigned-tasks-list::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+.unassigned-task-card {
+  min-width: 260px;
+  padding: 14px 18px;
+  background: white;
+  border: 1px solid var(--calendar-border);
+  border-left: 6px solid var(--primary-color);
+  border-radius: 16px;
+  cursor: grab;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  user-select: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.dark .unassigned-task-card {
+  background: #1e293b;
+}
+
+.unassigned-task-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.2);
+  border-color: var(--primary-color);
+}
+
+.unassigned-task-card:active {
+  cursor: grabbing;
+}
+
+.unassigned-task-name {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.unassigned-task-client {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.drag-over {
+  background: rgba(99, 102, 241, 0.08) !important;
+  box-shadow: inset 0 0 0 2px var(--primary-color) !important;
+  z-index: 5;
+}
+
+@media (max-width: 768px) {
+  .planning-bar {
+    padding: 10px 12px;
+  }
+
+  .unassigned-task-card {
+    min-width: 160px;
+  }
 }

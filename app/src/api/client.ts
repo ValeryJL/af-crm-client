@@ -24,16 +24,37 @@ apiClient.interceptors.request.use(
     }
 );
 
-// Response Interceptor to handle global errors (like 401 Unauthorized)
+// Response Interceptor to handle global errors (like 401 Unauthorized or 502 Gateway)
 apiClient.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response?.status === 401) {
-            // Check if we're not already on the login page to avoid loops
-            if (!window.location.pathname.includes('/login')) {
+        const status = error.response?.status;
+        const currentPath = window.location.pathname;
+
+        if (status === 401) {
+            // Skip redirect if we're checking setup status or already on protected-from-redirect pages
+            const url = error.config?.url || '';
+            const isSetupCheck = url.includes('/setup-status');
+            const isLoginPage = currentPath.includes('/login');
+            const isSetupPage = currentPath.includes('/setup');
+            const isRegisterPage = currentPath.includes('/register');
+            const isUnavailablePage = currentPath.includes('/unavailable');
+
+            if (!isSetupCheck && !isLoginPage && !isSetupPage && !isRegisterPage && !isUnavailablePage) {
+                const hasToken = !!localStorage.getItem('token');
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
-                window.location.href = '/login?expired=true';
+
+                if (hasToken) {
+                    window.location.href = '/login?expired=true';
+                } else {
+                    window.location.href = '/login';
+                }
+            }
+        } else if (!status || (status >= 502 && status <= 504)) {
+            // Backend is down (502/503/504) or network error (no status)
+            if (!currentPath.includes('/unavailable')) {
+                window.location.href = '/unavailable';
             }
         }
         return Promise.reject(error);
