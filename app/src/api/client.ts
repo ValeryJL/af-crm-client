@@ -24,4 +24,20 @@ apiClient.interceptors.request.use(
     }
 );
 
+// Response Interceptor to handle global errors (like 401 Unauthorized)
+apiClient.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response?.status === 401) {
+            // Check if we're not already on the login page to avoid loops
+            if (!window.location.pathname.includes('/login')) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = '/login?expired=true';
+            }
+        }
+        return Promise.reject(error);
+    }
+);
+
 export default apiClient;

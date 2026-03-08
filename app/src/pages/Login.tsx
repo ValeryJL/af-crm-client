@@ -17,6 +17,15 @@ export function Login() {
     const { login } = useAuth();
     const navigate = useNavigate();
 
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('expired') === 'true') {
+            setError('Your session has expired. Please log in again.');
+            // Clean up the URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    }, []);
+
     const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'your-google-client-id';
 
     useEffect(() => {

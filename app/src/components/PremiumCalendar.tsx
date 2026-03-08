@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isSameMonth, isSameDay, eachDayOfInterval, addDays, startOfDay, addHours } from 'date-fns';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Loader2, X, Clock, Trash2, CheckCircle2, ExternalLink } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Loader2, X, Clock, Trash2, CheckCircle2, ExternalLink, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import './Calendar.css';
 import apiClient from '../api/client';
@@ -13,7 +13,8 @@ interface CalendarItem {
     end?: Date;
     allDay: boolean;
     type: 'EVENT' | 'TASK';
-    status?: string;
+    status?: 'UNASSIGNED' | 'PENDING' | 'RESOLVED' | 'OVERDUE' | 'DONE'; // Support both new and legacy status for compatibility
+    scheduledDate?: Date;
     color?: string;
     serviceId?: number;
 }
@@ -90,19 +91,29 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
                 color: e.color || '#6366f1'
             }));
 
-            const mappedTasks: CalendarItem[] = response.data.tasks.map((t: any) => ({
-                id: t.id,
-                title: t.serviceName,
-                description: `Task Type: ${t.type}`,
-                start: new Date(t.scheduledDate),
-                allDay: true,
-                type: 'TASK',
-                status: t.status,
-                color: '#10b981',
-                serviceId: t.serviceId
-            }));
+            const mappedTasks: CalendarItem[] = response.data.tasks.map((t: any) => {
+                const dateVal = t.fechaProgramada || t.scheduledDate;
+                const scheduledDate = dateVal ? new Date(dateVal) : null;
+                const status = t.status as CalendarItem['status'];
+                const isOverdue = status === 'PENDING' && scheduledDate && scheduledDate < new Date();
 
-            setItems([...mappedEvents, ...mappedTasks]);
+                return {
+                    id: t.id,
+                    title: t.serviceName,
+                    description: `Client: ${t.cliente} | Equipment: ${t.equipo}`,
+                    // Only set start if we have a real date, otherwise it won't show in grid
+                    start: scheduledDate || new Date(0),
+                    allDay: !dateVal,
+                    type: 'TASK',
+                    status: isOverdue ? 'OVERDUE' : status,
+                    color: status === 'RESOLVED' || status === 'DONE' ? '#10b981' : (isOverdue || status === 'OVERDUE' ? '#ef4444' : (status === 'UNASSIGNED' ? '#f59e0b' : '#3b82f6')),
+                    serviceId: t.serviceId,
+                    scheduledDate: scheduledDate || undefined
+                };
+            });
+
+            // Filter out tasks with no date (year 1970) for the grid views
+            setItems([...mappedEvents, ...mappedTasks].filter(item => item.start.getTime() > 0 || view === 'agenda'));
         } catch (error) {
             console.error('Error fetching calendar data:', error);
             setItems([]);
@@ -212,18 +223,20 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
         }
     };
 
-    const handleDeleteEvent = async () => {
-        if (!selectedItem || selectedItem.type !== 'EVENT') return;
-        if (!window.confirm('Are you sure you want to delete this event?')) return;
+    const handleDeleteItem = async () => {
+        if (!selectedItem) return;
+        const typeLabel = selectedItem.type === 'TASK' ? 'task' : 'event';
+        if (!window.confirm(`Are you sure you want to delete this ${typeLabel}?`)) return;
 
         setIsSaving(true);
         try {
-            await apiClient.delete(`/calendar/events/${selectedItem.id}`);
+            const endpoint = selectedItem.type === 'TASK' ? `/calendar/tasks/${selectedItem.id}` : `/calendar/events/${selectedItem.id}`;
+            await apiClient.delete(endpoint);
             setShowEditModal(false);
             fetchData();
         } catch (error) {
-            console.error('Error deleting event:', error);
-            alert('Failed to delete event');
+            console.error(`Error deleting ${typeLabel}:`, error);
+            alert(`Failed to delete ${typeLabel}`);
         } finally {
             setIsSaving(false);
         }
@@ -231,7 +244,7 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
 
     const handleToggleTaskStatus = async () => {
         if (!selectedItem || selectedItem.type !== 'TASK') return;
-        const newStatus = selectedItem.status === 'DONE' ? 'PENDING' : 'DONE';
+        const newStatus = selectedItem.status === 'RESOLVED' ? 'PENDING' : 'RESOLVED';
 
         setIsSaving(true);
         try {
@@ -289,7 +302,7 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
         const allDays = eachDayOfInterval({ start: startDate, end: endDate });
 
         return (
-            <div className="calendar-scroll-wrapper">
+            <div className="calendar-scroll-wrapper month-view-wrapper">
                 <div className="calendar-days month-view">
                     {allDays.map((d) => {
                         const isCurrentMonth = isSameMonth(d, monthStart);
@@ -306,16 +319,25 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
                                     {dayItems.map((item: CalendarItem) => (
                                         <div
                                             key={`${item.type}-${item.id}`}
-                                            className={`event-item ${item.type.toLowerCase()} ${item.status === 'URGENT' ? 'urgent' : ''}`}
-                                            title={item.description}
+                                            className={`event-item ${item.type.toLowerCase()} ${item.status === 'OVERDUE' ? 'urgent ripple' : ''}`}
+                                            title={`${item.title}${item.status === 'OVERDUE' ? ' - MISSING REPORT!' : ''}`}
                                             style={item.color ? { borderLeftColor: item.color } : {}}
                                             onClick={(e) => handleItemClick(e, item)}
                                         >
-                                            <div className="event-time">{format(item.start, 'HH:mm')}</div>
+                                            <div className="event-time">
+                                                {item.status === 'UNASSIGNED' ? 'TBD' : format(item.start, 'HH:mm')}
+                                            </div>
                                             <div className="event-title">
-                                                <span className="item-type-badge">{item.type[0]}</span>
+                                                <span className={`item-type-badge ${item.status === 'OVERDUE' ? 'bg-rose-500' : ''}`}>
+                                                    {item.status === 'OVERDUE' ? '!' : item.type[0]}
+                                                </span>
                                                 {item.title}
                                             </div>
+                                            {item.status === 'OVERDUE' && (
+                                                <div className="text-[10px] font-black text-rose-500 mt-1 uppercase tracking-tighter animate-pulse">
+                                                    Missing Report
+                                                </div>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
@@ -370,13 +392,13 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
                                             {cellItems.map((item: CalendarItem) => (
                                                 <div
                                                     key={`${item.type}-${item.id}`}
-                                                    className={`event-item ${item.type.toLowerCase()} ${item.status === 'DONE' ? 'opacity-50 line-through' : ''}`}
+                                                    className={`event-item ${item.type.toLowerCase()} ${item.status === 'RESOLVED' ? 'opacity-50 line-through' : ''}`}
                                                     style={{ borderLeftColor: item.color }}
                                                     onClick={(e) => handleItemClick(e, item)}
                                                 >
                                                     <div className="event-time">{format(item.start, 'HH:mm')}</div>
                                                     <div className="font-bold flex items-center gap-1">
-                                                        {item.status === 'DONE' && <CheckCircle2 size={10} className="text-emerald-500" />}
+                                                        {item.status === 'RESOLVED' && <CheckCircle2 size={10} className="text-emerald-500" />}
                                                         {item.title}
                                                     </div>
                                                     <div className="text-[10px] opacity-70">{item.description}</div>
@@ -403,9 +425,9 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
                     </div>
                     <div className="agenda-content flex-1">
                         <div className="flex justify-between items-start">
-                            <h3 className={`font-bold flex items-center gap-2 ${item.status === 'DONE' ? 'text-slate-400 line-through' : ''}`}>
+                            <h3 className={`font-bold flex items-center gap-2 ${item.status === 'RESOLVED' ? 'text-slate-400 line-through' : ''}`}>
                                 <span className={`w-2 h-2 rounded-full`} style={{ background: item.color }}></span>
-                                {item.status === 'DONE' && <CheckCircle2 size={14} className="text-emerald-500" />}
+                                {item.status === 'RESOLVED' && <CheckCircle2 size={14} className="text-emerald-500" />}
                                 {item.title}
                             </h3>
                             <span className="text-[10px] uppercase font-black bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded-md">{item.type}</span>
@@ -521,12 +543,24 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
                                 <div className="space-y-4">
                                     <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800">
                                         <div className="font-bold text-lg mb-1">{selectedItem.title}</div>
-                                        <div className="text-sm text-slate-500 flex items-center gap-2">
-                                            <Clock size={14} /> Scheduled for {format(selectedItem.start, 'PPP')}
+                                        <div className="text-sm text-slate-500 flex flex-col gap-1">
+                                            <div className="flex items-center gap-2">
+                                                <Clock size={14} />
+                                                {selectedItem.status === 'UNASSIGNED'
+                                                    ? 'Not yet scheduled'
+                                                    : `Scheduled for ${format(selectedItem.start, 'PPP p')}`
+                                                }
+                                            </div>
+                                            {selectedItem.status === 'OVERDUE' && (
+                                                <div className="flex items-center gap-2 text-rose-500 font-bold bg-rose-50 dark:bg-rose-900/20 p-2 rounded-lg mt-2 border border-rose-100 dark:border-rose-800">
+                                                    <AlertCircle size={16} />
+                                                    MISSING REPORT: Date passed without resolution.
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="form-group">
-                                        <label className="form-label">Reprogram Date</label>
+                                        <label className="form-label">{selectedItem.status === 'UNASSIGNED' ? 'Assign Date & Time' : 'Reprogram Date & Time'}</label>
                                         <input
                                             type="datetime-local"
                                             className="form-input"
@@ -534,7 +568,11 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
                                             onChange={e => setFormData({ ...formData, start: e.target.value })}
                                         />
                                     </div>
-                                    <p className="text-xs text-slate-400 italic">Changing the date will update the work schedule for this service.</p>
+                                    <p className="text-xs text-slate-400 italic">
+                                        {selectedItem.status === 'UNASSIGNED'
+                                            ? 'Assigning a date will move this task to PENDING status.'
+                                            : 'Changing the date will update the work schedule.'}
+                                    </p>
                                     <div className="pt-4 mt-2 border-t border-slate-100 dark:border-slate-800">
                                         <button
                                             className="text-xs font-bold text-indigo-500 hover:text-indigo-600 flex items-center gap-1 group"
@@ -590,27 +628,24 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
                         </div>
                         <div className="modal-footer flex justify-between">
                             <div className="flex gap-2">
-                                {selectedItem.type === 'EVENT' ? (
-                                    <button className="btn btn-outline-danger flex items-center gap-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 px-3 transition-colors rounded-lg border border-red-200 dark:border-red-900/50" onClick={handleDeleteEvent} disabled={isSaving}>
-                                        <Trash2 size={16} />
-                                        <span className="text-sm font-semibold">Delete</span>
-                                    </button>
-                                ) : (
-                                    <button
-                                        className={`btn flex items-center gap-2 transition-colors rounded-lg border ${selectedItem.status === 'DONE' ? 'text-slate-500 border-slate-200 bg-slate-50' : 'text-emerald-600 border-emerald-200 hover:bg-emerald-50'}`}
-                                        onClick={handleToggleTaskStatus}
-                                        disabled={isSaving}
-                                    >
-                                        <CheckCircle2 size={16} />
-                                        <span className="text-sm font-semibold">{selectedItem.status === 'DONE' ? 'Restart Task' : 'Complete Visit'}</span>
-                                    </button>
-                                )}
+                                <button className="btn btn-outline-danger flex items-center gap-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 px-3 transition-colors rounded-lg border border-red-200 dark:border-red-900/50" onClick={handleDeleteItem} disabled={isSaving}>
+                                    <Trash2 size={16} />
+                                    <span className="text-sm font-semibold">Delete</span>
+                                </button>
+                                <button
+                                    className={`btn flex items-center gap-2 transition-colors rounded-lg border ${(selectedItem.status === 'RESOLVED' || selectedItem.status === 'DONE') ? 'text-slate-500 border-slate-200 bg-slate-50' : 'text-emerald-600 border-emerald-200 hover:bg-emerald-50'}`}
+                                    onClick={handleToggleTaskStatus}
+                                    disabled={isSaving || selectedItem.status === 'UNASSIGNED'}
+                                >
+                                    <CheckCircle2 size={16} />
+                                    <span className="text-sm font-semibold">{(selectedItem.status === 'RESOLVED' || selectedItem.status === 'DONE') ? 'Mark as Not Done' : 'Submit Visit Report'}</span>
+                                </button>
                             </div>
                             <div className="flex gap-2">
                                 <button className="btn btn-secondary" onClick={() => setShowEditModal(false)}>Close</button>
                                 {selectedItem.type === 'TASK' ? (
-                                    <button className="btn btn-primary bg-emerald-600 hover:bg-emerald-700" onClick={handleReprogramTask} disabled={isSaving}>
-                                        {isSaving ? <Loader2 size={18} className="animate-spin" /> : 'Reprogram Visit'}
+                                    <button className="btn btn-primary bg-indigo-600 hover:bg-indigo-700" onClick={handleReprogramTask} disabled={isSaving || !formData.start}>
+                                        {isSaving ? <Loader2 size={18} className="animate-spin" /> : (selectedItem.status === 'UNASSIGNED' ? 'Assign Date' : 'Update Schedule')}
                                     </button>
                                 ) : (
                                     <button className="btn btn-primary" onClick={handleUpdateEvent} disabled={isSaving || !formData.title}>

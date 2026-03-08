@@ -117,6 +117,7 @@ export function Settings() {
                         </button>
                     </div>
 
+
                     <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20 text-amber-800 dark:text-amber-400">
                         <div className="flex gap-3">
                             <AlertCircle size={18} className="shrink-0 mt-0.5" />

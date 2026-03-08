@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Calendar, MapPin, PowerOff, RefreshCw, AlertCircle, X, Loader2, Edit2, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Search, Calendar, MapPin, AlertCircle, X, Loader2, Trash2, ChevronRight, Wrench, Clock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import apiClient from '../api/client';
 
@@ -11,15 +12,22 @@ interface Grupo {
 interface Service {
     id: number;
     cliente: string;
-    nombre: string;
+    nombre: string; // Used for identifying the service/contract name
+    equipo: string; // Specific equipment details
     direccion: string;
-    frecuencia: string;
+    frecuencia: 'Mensual' | 'Semanal' | 'Quincenal' | 'EVENTUAL';
+    observaciones?: string;
+    fechaInicio: string;
+    fechaFin: string;
+    serviceToggle?: boolean;
+    fechaPrimerService?: string;
     baja?: string | null;
     grupos?: Grupo | null;
 }
 
 export function Services() {
     const [searchTerm, setSearchTerm] = useState('');
+    const [filterFrequency, setFilterFrequency] = useState('all');
     const [services, setServices] = useState<Service[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -29,15 +37,21 @@ export function Services() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [editingServiceId, setEditingServiceId] = useState<number | null>(null);
     const { user } = useAuth();
+    const navigate = useNavigate();
     const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
 
     // Form State
     const [formData, setFormData] = useState({
         cliente: '',
         nombre: '',
+        equipo: '',
         direccion: '',
-        frecuencia: 'Mensual',
-        observaciones: ''
+        frecuencia: 'Mensual' as Service['frecuencia'],
+        observaciones: '',
+        fechaInicio: new Date().toISOString().split('T')[0],
+        fechaFin: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
+        serviceToggle: false,
+        fechaPrimerService: ''
     });
 
     const fetchServices = async () => {
@@ -62,19 +76,30 @@ export function Services() {
         e.preventDefault();
         setIsSubmitting(true);
         try {
+            const payload = {
+                ...formData,
+                frecuencia: formData.frecuencia.toLowerCase(),
+                // Send null instead of empty string so backend does not try to parse it
+                fechaPrimerService: formData.fechaPrimerService || null
+            };
             if (editingServiceId) {
-                await apiClient.put(`/services/${editingServiceId}`, formData);
+                await apiClient.put(`/services/${editingServiceId}`, payload);
             } else {
-                await apiClient.post('/services', formData);
+                await apiClient.post('/services', payload);
             }
             setIsModalOpen(false);
             setEditingServiceId(null);
             setFormData({
                 cliente: '',
                 nombre: '',
+                equipo: '',
                 direccion: '',
                 frecuencia: 'Mensual',
-                observaciones: ''
+                observaciones: '',
+                fechaInicio: new Date().toISOString().split('T')[0],
+                fechaFin: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
+                serviceToggle: false,
+                fechaPrimerService: ''
             });
             fetchServices(); // Refetch table
         } catch (err: any) {
@@ -85,65 +110,18 @@ export function Services() {
         }
     };
 
-    const handleEditClick = (svc: Service) => {
-        setEditingServiceId(svc.id);
-        setFormData({
-            cliente: svc.cliente || '',
-            nombre: svc.nombre || '',
-            direccion: svc.direccion || '',
-            frecuencia: svc.frecuencia || 'Mensual',
-            observaciones: ''
-        });
-        setIsModalOpen(true);
-    };
 
-    const handleDelete = async (id: number) => {
-        if (!window.confirm("Are you sure you want to delete this service contract?")) return;
-        try {
-            await apiClient.delete(`/services/${id}`);
-            fetchServices();
-        } catch (err: any) {
-            console.error('Failed to delete service', err);
-            alert('Failed to delete service contract.');
-        }
-    };
+    const filteredServices = services.filter(svc => {
+        const matchesSearch =
+            svc.cliente?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            svc.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            svc.direccion?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            svc.equipo?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const handleCancelService = async (svc: Service) => {
-        if (!window.confirm(`Are you sure you want to cancel the service for ${svc.cliente}? This will stop future scheduling.`)) return;
-        try {
-            const today = new Date().toISOString().split('T')[0];
-            await apiClient.put(`/services/${svc.id}`, {
-                ...svc,
-                grupos: undefined,
-                baja: today
-            });
-            fetchServices();
-        } catch (err: any) {
-            console.error('Failed to cancel service', err);
-            alert('Failed to cancel service.');
-        }
-    };
+        const matchesFrequency = filterFrequency === 'all' || svc.frecuencia === filterFrequency;
 
-    const handleReactivateService = async (svc: Service) => {
-        if (!window.confirm(`Reactivate service for ${svc.cliente}? This will regenerate the scheduling calendar.`)) return;
-        try {
-            await apiClient.put(`/services/${svc.id}`, {
-                ...svc,
-                grupos: undefined,
-                baja: null
-            });
-            fetchServices();
-        } catch (err: any) {
-            console.error('Failed to reactivate service', err);
-            alert('Failed to reactivate service.');
-        }
-    };
-
-    const filteredServices = services.filter(svc =>
-        svc.cliente?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        svc.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        svc.direccion?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+        return matchesSearch && matchesFrequency;
+    });
 
     return (
         <div className="space-y-6">
@@ -159,9 +137,14 @@ export function Services() {
                             setFormData({
                                 cliente: '',
                                 nombre: '',
+                                equipo: '',
                                 direccion: '',
                                 frecuencia: 'Mensual',
-                                observaciones: ''
+                                observaciones: '',
+                                fechaInicio: new Date().toISOString().split('T')[0],
+                                fechaFin: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
+                                serviceToggle: false,
+                                fechaPrimerService: ''
                             });
                             setIsModalOpen(true);
                         }}
@@ -186,10 +169,16 @@ export function Services() {
                     </div>
                     {/* Filters */}
                     <div className="flex gap-2 w-full sm:w-auto">
-                        <select className="flex-1 sm:w-auto border border-gray-200 dark:border-slate-600 rounded-lg px-4 py-2 bg-gray-50 dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-indigo-500">
+                        <select
+                            value={filterFrequency}
+                            onChange={(e) => setFilterFrequency(e.target.value)}
+                            className="flex-1 sm:w-auto border border-gray-200 dark:border-slate-600 rounded-lg px-4 py-2 bg-gray-50 dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-indigo-500"
+                        >
                             <option value="all">Frequency: All</option>
-                            <option value="monthly">Monthly</option>
-                            <option value="quarterly">Quarterly</option>
+                            <option value="Semanal">Semanal</option>
+                            <option value="Quincenal">Quincenal</option>
+                            <option value="Mensual">Mensual</option>
+                            <option value="EVENTUAL">EVENTUAL</option>
                         </select>
                     </div>
                 </div>
@@ -215,67 +204,52 @@ export function Services() {
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
-                            {filteredServices.map((svc) => {
-                                const isActive = !svc.baja;
-                                return (
-                                    <div key={svc.id} className={`border rounded-2xl p-6 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 flex flex-col gap-4 ${isActive ? 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700' : 'bg-rose-50/30 dark:bg-rose-900/10 border-rose-200 dark:border-rose-900/50'}`}>
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <h3 className="font-bold text-xl text-slate-800 dark:text-slate-100 tracking-tight">{svc.cliente || 'Unknown Client'}</h3>
-                                                <span className={`inline-block px-3 py-1 mt-2 text-xs font-bold uppercase tracking-wider rounded-md ${isActive ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400' : 'bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-400'}`}>
-                                                    {isActive ? 'ACTIVE' : 'INACTIVE'}
-                                                </span>
-                                            </div>
-                                            {isAdmin && (
-                                                isActive ? (
-                                                    <button
-                                                        onClick={() => handleCancelService(svc)}
-                                                        title="Cancel Service"
-                                                        className="p-2 rounded-xl transition-colors text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10">
-                                                        <PowerOff size={20} />
-                                                    </button>
-                                                ) : (
-                                                    <button
-                                                        onClick={() => handleReactivateService(svc)}
-                                                        title="Reactivate Service"
-                                                        className="p-2 rounded-xl transition-colors text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10">
-                                                        <RefreshCw size={20} />
-                                                    </button>
-                                                )
-                                            )}
+                            {filteredServices.map((svc) => (
+                                <div
+                                    key={svc.id}
+                                    onClick={() => navigate(`/services/${svc.id}`)}
+                                    className="cursor-pointer border rounded-2xl p-6 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 flex flex-col gap-4 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 group"
+                                >
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <h3 className="font-bold text-xl text-slate-800 dark:text-slate-100 tracking-tight group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{svc.cliente || 'Unknown Client'}</h3>
+                                            <p className="text-sm text-slate-500 mt-0.5">{svc.nombre}</p>
                                         </div>
+                                        <ChevronRight size={20} className="text-slate-300 group-hover:text-indigo-400 transition-colors shrink-0 mt-1" />
+                                    </div>
 
-                                        <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300 mt-2 flex-1 font-medium bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
-                                            <div className="flex items-center gap-3">
-                                                <WrenchIcon size={18} className="text-indigo-400" />
-                                                <span>{svc.grupos?.nombre || svc.nombre || 'Unspecified Engine'}</span>
-                                            </div>
-                                            <div className="flex items-center gap-3">
-                                                <Calendar size={18} className="text-sky-400" />
-                                                <span>{svc.frecuencia || 'Unscheduled'}</span>
-                                            </div>
-                                            <div className="flex items-center gap-3">
-                                                <MapPin size={18} className="text-amber-400" />
-                                                <span>{svc.direccion || 'Unspecified Location'}</span>
-                                            </div>
+                                    <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300 flex-1 font-medium bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
+                                        <div className="flex items-center gap-3">
+                                            <Wrench size={16} className="text-indigo-400 shrink-0" />
+                                            <span className="truncate">{svc.equipo || 'Unspecified Equipment'}</span>
                                         </div>
-
-                                        <div className="pt-4 border-t border-slate-100 dark:border-slate-700 mt-2 flex justify-between items-center">
-                                            <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">ID: #{svc.id.toString().padStart(4, '0')}</span>
-                                            {isAdmin && (
-                                                <div className="flex gap-2">
-                                                    <button onClick={() => handleEditClick(svc)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors" title="Edit Service">
-                                                        <Edit2 size={18} />
-                                                    </button>
-                                                    <button onClick={() => handleDelete(svc.id)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-colors" title="Delete Service">
-                                                        <Trash2 size={18} />
-                                                    </button>
-                                                </div>
-                                            )}
+                                        <div className="flex items-center gap-3">
+                                            <Calendar size={16} className="text-sky-400 shrink-0" />
+                                            <span className="capitalize">{svc.frecuencia || 'Unscheduled'}</span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <MapPin size={16} className="text-amber-400 shrink-0" />
+                                            <span className="truncate">{svc.direccion || 'Unspecified Location'}</span>
+                                        </div>
+                                        <div className="pt-2 mt-1 border-t border-slate-200/50 dark:border-slate-600/50 flex items-center gap-2">
+                                            <Clock size={14} className="text-slate-400" />
+                                            <span className="text-xs text-slate-400">{new Date(svc.fechaInicio).toLocaleDateString()} → {new Date(svc.fechaFin).toLocaleDateString()}</span>
                                         </div>
                                     </div>
-                                );
-                            })}
+
+                                    {isAdmin && (
+                                        <div className="pt-3 border-t border-slate-100 dark:border-slate-700 flex justify-end">
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); if (window.confirm('Delete this service?')) apiClient.delete(`/services/${svc.id}`).then(fetchServices); }}
+                                                className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors"
+                                                title="Delete Service"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
                         </div>
                     )}
                 </div>
@@ -301,20 +275,32 @@ export function Services() {
                                         value={formData.cliente}
                                         onChange={(e) => setFormData({ ...formData, cliente: e.target.value })}
                                         className="w-full px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
-                                        placeholder="AF-CRM Corp"
+                                        placeholder="AF-CRM Corp / John Doe"
                                     />
                                 </div>
                                 <div className="flex-1">
-                                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Equipment Name <span className="text-rose-500">*</span></label>
+                                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Service Title <span className="text-rose-500">*</span></label>
                                     <input
                                         type="text"
                                         required
                                         value={formData.nombre}
                                         onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
                                         className="w-full px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
-                                        placeholder="Main Data Center UPS"
+                                        placeholder="Annual Maintenance Contract"
                                     />
                                 </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Equipment Details <span className="text-rose-500">*</span></label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={formData.equipo}
+                                    onChange={(e) => setFormData({ ...formData, equipo: e.target.value })}
+                                    className="w-full px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                                    placeholder="Fire Alarm Model X / Electrogen Grupo Model Y"
+                                />
                             </div>
 
                             <div>
@@ -334,16 +320,73 @@ export function Services() {
                                 <select
                                     required
                                     value={formData.frecuencia}
-                                    onChange={(e) => setFormData({ ...formData, frecuencia: e.target.value })}
+                                    onChange={(e) => setFormData({ ...formData, frecuencia: e.target.value as Service['frecuencia'] })}
                                     className="w-full px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
                                 >
-                                    <option value="Mensual">Mensual (12/year)</option>
-                                    <option value="Bimestral">Bimestral (6/year)</option>
-                                    <option value="Trimestral">Trimestral (4/year)</option>
-                                    <option value="Semestral">Semestral (2/year)</option>
-                                    <option value="Anual">Anual (1/year)</option>
+                                    <option value="Mensual">Mensual</option>
+                                    <option value="Semanal">Semanal</option>
+                                    <option value="Quincenal">Quincenal (15 days)</option>
+                                    <option value="EVENTUAL">EVENTUAL</option>
                                 </select>
                             </div>
+
+                            <div className="flex flex-col sm:flex-row gap-4">
+                                <div className="flex-1">
+                                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Start Date <span className="text-rose-500">*</span></label>
+                                    <input
+                                        type="date"
+                                        required
+                                        value={formData.fechaInicio}
+                                        onChange={(e) => setFormData({ ...formData, fechaInicio: e.target.value })}
+                                        className="w-full px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                                    />
+                                </div>
+                                <div className="flex-1">
+                                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">End Date <span className="text-rose-500">*</span></label>
+                                    <input
+                                        type="date"
+                                        required
+                                        value={formData.fechaFin}
+                                        onChange={(e) => setFormData({ ...formData, fechaFin: e.target.value })}
+                                        className="w-full px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-3 p-3 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-xl border border-indigo-100/50 dark:border-indigo-900/20">
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={formData.serviceToggle}
+                                        onChange={(e) => setFormData({ ...formData, serviceToggle: e.target.checked })}
+                                        className="sr-only peer"
+                                    />
+                                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
+                                </label>
+                                <div className="flex flex-col">
+                                    <span className="text-sm font-bold text-slate-800 dark:text-slate-100">Generate Yearly Service Events</span>
+                                    <span className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">If enabled, the system will create a special "Service" event once per year on the anniversary.</span>
+                                </div>
+                            </div>
+
+                            {formData.serviceToggle && (
+                                <div className="ml-2 pl-4 border-l-2 border-indigo-200 dark:border-indigo-700">
+                                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                                        First Service Date <span className="text-slate-400 font-normal">(optional)</span>
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={formData.fechaPrimerService}
+                                        min={formData.fechaInicio}
+                                        max={formData.fechaFin}
+                                        onChange={(e) => setFormData({ ...formData, fechaPrimerService: e.target.value })}
+                                        className="w-full px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                                    />
+                                    <p className="text-[10px] text-slate-400 mt-1 italic">
+                                        If empty, the first yearly service will be created 1 year from the start date. Subsequent services repeat annually until the end date.
+                                    </p>
+                                </div>
+                            )}
 
                             <div>
                                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Observations</label>
@@ -373,9 +416,5 @@ export function Services() {
     );
 }
 
-// Temporary inline Wrench proxy
-function WrenchIcon({ size, className }: { size: number, className: string }) {
-    return (
-        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" /></svg>
-    );
-}
+
+
