@@ -110,7 +110,6 @@ export function Services() {
         }
     };
 
-
     const filteredServices = services.filter(svc => {
         const matchesSearch =
             svc.cliente?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -257,155 +256,157 @@ export function Services() {
 
             {/* New Service Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
-                    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col animate-fade-in-up my-8">
-                        <div className="flex justify-between items-center p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
-                            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">{editingServiceId ? 'Edit Service Contract' : 'New Service Contract'}</h2>
-                            <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-rose-500 transition-colors bg-white dark:bg-slate-700 p-1 rounded-full shadow-sm">
+                <div className="modal-overlay">
+                    <div className="modal-content">
+                        <div className="modal-header">
+                            <h2 className="modal-title">{editingServiceId ? 'Edit Service Contract' : 'New Service Contract'}</h2>
+                            <button onClick={() => setIsModalOpen(false)} className="close-btn">
                                 <X size={20} />
                             </button>
                         </div>
-                        <form onSubmit={handleCreateOrUpdateService} className="p-6 flex flex-col gap-4">
-                            <div className="flex flex-col sm:flex-row gap-4">
-                                <div className="flex-1">
-                                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Company/Client <span className="text-rose-500">*</span></label>
+                        <form onSubmit={handleCreateOrUpdateService} className="flex flex-col h-full overflow-hidden">
+                            <div className="modal-body space-y-4">
+                                <div className="flex flex-col sm:flex-row gap-4">
+                                    <div className="flex-1">
+                                        <label className="form-label">Company/Client <span className="text-rose-500">*</span></label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={formData.cliente}
+                                            onChange={(e) => setFormData({ ...formData, cliente: e.target.value })}
+                                            className="form-input"
+                                            placeholder="AF-CRM Corp / John Doe"
+                                        />
+                                    </div>
+                                    <div className="flex-1">
+                                        <label className="form-label">Service Title <span className="text-rose-500">*</span></label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={formData.nombre}
+                                            onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                                            className="form-input"
+                                            placeholder="Annual Maintenance Contract"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="form-label">Equipment Details <span className="text-rose-500">*</span></label>
                                     <input
                                         type="text"
                                         required
-                                        value={formData.cliente}
-                                        onChange={(e) => setFormData({ ...formData, cliente: e.target.value })}
-                                        className="w-full px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
-                                        placeholder="AF-CRM Corp / John Doe"
+                                        value={formData.equipo}
+                                        onChange={(e) => setFormData({ ...formData, equipo: e.target.value })}
+                                        className="form-input"
+                                        placeholder="Fire Alarm Model X / Electrogen Grupo Model Y"
                                     />
                                 </div>
-                                <div className="flex-1">
-                                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Service Title <span className="text-rose-500">*</span></label>
+
+                                <div>
+                                    <label className="form-label">Service Address <span className="text-rose-500">*</span></label>
                                     <input
                                         type="text"
                                         required
-                                        value={formData.nombre}
-                                        onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                                        className="w-full px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
-                                        placeholder="Annual Maintenance Contract"
+                                        value={formData.direccion}
+                                        onChange={(e) => setFormData({ ...formData, direccion: e.target.value })}
+                                        className="form-input"
+                                        placeholder="Av. Corrientes 1234, CABA"
                                     />
                                 </div>
-                            </div>
 
-                            <div>
-                                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Equipment Details <span className="text-rose-500">*</span></label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={formData.equipo}
-                                    onChange={(e) => setFormData({ ...formData, equipo: e.target.value })}
-                                    className="w-full px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
-                                    placeholder="Fire Alarm Model X / Electrogen Grupo Model Y"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Service Address <span className="text-rose-500">*</span></label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={formData.direccion}
-                                    onChange={(e) => setFormData({ ...formData, direccion: e.target.value })}
-                                    className="w-full px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
-                                    placeholder="Av. Corrientes 1234, CABA"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Frequency <span className="text-rose-500">*</span></label>
-                                <select
-                                    required
-                                    value={formData.frecuencia}
-                                    onChange={(e) => setFormData({ ...formData, frecuencia: e.target.value as Service['frecuencia'] })}
-                                    className="w-full px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
-                                >
-                                    <option value="Mensual">Mensual</option>
-                                    <option value="Semanal">Semanal</option>
-                                    <option value="Quincenal">Quincenal (15 days)</option>
-                                    <option value="EVENTUAL">EVENTUAL</option>
-                                </select>
-                            </div>
-
-                            <div className="flex flex-col sm:flex-row gap-4">
-                                <div className="flex-1">
-                                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Start Date <span className="text-rose-500">*</span></label>
-                                    <input
-                                        type="date"
+                                <div>
+                                    <label className="form-label">Frequency <span className="text-rose-500">*</span></label>
+                                    <select
                                         required
-                                        value={formData.fechaInicio}
-                                        onChange={(e) => setFormData({ ...formData, fechaInicio: e.target.value })}
-                                        className="w-full px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
-                                    />
+                                        value={formData.frecuencia}
+                                        onChange={(e) => setFormData({ ...formData, frecuencia: e.target.value as Service['frecuencia'] })}
+                                        className="form-select"
+                                    >
+                                        <option value="Mensual">Mensual</option>
+                                        <option value="Semanal">Semanal</option>
+                                        <option value="Quincenal">Quincenal (15 days)</option>
+                                        <option value="EVENTUAL">EVENTUAL</option>
+                                    </select>
                                 </div>
-                                <div className="flex-1">
-                                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">End Date <span className="text-rose-500">*</span></label>
-                                    <input
-                                        type="date"
-                                        required
-                                        value={formData.fechaFin}
-                                        onChange={(e) => setFormData({ ...formData, fechaFin: e.target.value })}
-                                        className="w-full px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
-                                    />
-                                </div>
-                            </div>
 
-                            <div className="flex items-center gap-3 p-3 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-xl border border-indigo-100/50 dark:border-indigo-900/20">
-                                <label className="relative inline-flex items-center cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={formData.serviceToggle}
-                                        onChange={(e) => setFormData({ ...formData, serviceToggle: e.target.checked })}
-                                        className="sr-only peer"
-                                    />
-                                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
-                                </label>
-                                <div className="flex flex-col">
-                                    <span className="text-sm font-bold text-slate-800 dark:text-slate-100">Generate Yearly Service Events</span>
-                                    <span className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">If enabled, the system will create a special "Service" event once per year on the anniversary.</span>
+                                <div className="flex flex-col sm:flex-row gap-4">
+                                    <div className="flex-1">
+                                        <label className="form-label">Start Date <span className="text-rose-500">*</span></label>
+                                        <input
+                                            type="date"
+                                            required
+                                            value={formData.fechaInicio}
+                                            onChange={(e) => setFormData({ ...formData, fechaInicio: e.target.value })}
+                                            className="form-input"
+                                        />
+                                    </div>
+                                    <div className="flex-1">
+                                        <label className="form-label">End Date <span className="text-rose-500">*</span></label>
+                                        <input
+                                            type="date"
+                                            required
+                                            value={formData.fechaFin}
+                                            onChange={(e) => setFormData({ ...formData, fechaFin: e.target.value })}
+                                            className="form-input"
+                                        />
+                                    </div>
                                 </div>
-                            </div>
 
-                            {formData.serviceToggle && (
-                                <div className="ml-2 pl-4 border-l-2 border-indigo-200 dark:border-indigo-700">
-                                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                                        First Service Date <span className="text-slate-400 font-normal">(optional)</span>
+                                <div className="flex items-center gap-3 p-3 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-xl border border-indigo-100/50 dark:border-indigo-900/20">
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.serviceToggle}
+                                            onChange={(e) => setFormData({ ...formData, serviceToggle: e.target.checked })}
+                                            className="sr-only peer"
+                                        />
+                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
                                     </label>
-                                    <input
-                                        type="date"
-                                        value={formData.fechaPrimerService}
-                                        min={formData.fechaInicio}
-                                        max={formData.fechaFin}
-                                        onChange={(e) => setFormData({ ...formData, fechaPrimerService: e.target.value })}
-                                        className="w-full px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
-                                    />
-                                    <p className="text-[10px] text-slate-400 mt-1 italic">
-                                        If empty, the first yearly service will be created 1 year from the start date. Subsequent services repeat annually until the end date.
-                                    </p>
+                                    <div className="flex flex-col">
+                                        <span className="text-sm font-bold text-slate-800 dark:text-slate-100">Generate Yearly Service Events</span>
+                                        <span className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">If enabled, the system will create a special "Service" event once per year on the anniversary.</span>
+                                    </div>
                                 </div>
-                            )}
 
-                            <div>
-                                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Observations</label>
-                                <textarea
-                                    rows={2}
-                                    value={formData.observaciones}
-                                    onChange={(e) => setFormData({ ...formData, observaciones: e.target.value })}
-                                    className="w-full px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none resize-none"
-                                    placeholder="Gate access code, special requirements..."
-                                />
+                                {formData.serviceToggle && (
+                                    <div className="ml-2 pl-4 border-l-2 border-indigo-200 dark:border-indigo-700">
+                                        <label className="form-label">
+                                            First Service Date <span className="text-slate-400 font-normal">(optional)</span>
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={formData.fechaPrimerService}
+                                            min={formData.fechaInicio}
+                                            max={formData.fechaFin}
+                                            onChange={(e) => setFormData({ ...formData, fechaPrimerService: e.target.value })}
+                                            className="form-input"
+                                        />
+                                        <p className="text-[10px] text-slate-400 mt-1 italic">
+                                            If empty, the first yearly service will be created 1 year from the start date. Subsequent services repeat annually until the end date.
+                                        </p>
+                                    </div>
+                                )}
+
+                                <div>
+                                    <label className="form-label">Observations</label>
+                                    <textarea
+                                        rows={2}
+                                        value={formData.observaciones}
+                                        onChange={(e) => setFormData({ ...formData, observaciones: e.target.value })}
+                                        className="form-textarea resize-none"
+                                        placeholder="Gate access code, special requirements..."
+                                    />
+                                </div>
                             </div>
 
-                            <div className="flex gap-3 justify-end mt-4">
-                                <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 rounded-xl font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
+                            <div className="modal-footer">
+                                <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-secondary">
                                     Cancel
                                 </button>
-                                <button type="submit" disabled={isSubmitting} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white px-5 py-2.5 rounded-xl font-medium transition-colors shadow-md shadow-indigo-200">
+                                <button type="submit" disabled={isSubmitting} className="btn btn-primary flex items-center gap-2">
                                     {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <Plus size={18} />}
-                                    <span>Create Service</span>
+                                    <span>{editingServiceId ? 'Update Service' : 'Create Service'}</span>
                                 </button>
                             </div>
                         </form>
@@ -415,6 +416,3 @@ export function Services() {
         </div>
     );
 }
-
-
-

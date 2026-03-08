@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 export function MainLayout() {
-    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const { user, logout, theme, toggleTheme } = useAuth();
@@ -48,17 +48,39 @@ export function MainLayout() {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-4 relative" ref={dropdownRef}>
-                    <div className="hidden sm:flex flex-col text-right">
-                        <p className="font-bold text-sm text-slate-800 dark:text-slate-200 tracking-tight">{user?.name || 'User'}</p>
-                        <p className="text-indigo-600 dark:text-indigo-400 text-[10px] font-black tracking-widest">{getRoleDisplayName(user?.role)}</p>
+                <div className="flex items-center gap-3 relative" ref={dropdownRef}>
+                    {/* PC View: Icons in nav when sidebar is closed */}
+                    {!sidebarOpen && (
+                        <div className="hidden lg:flex items-center gap-1 bg-slate-50 dark:bg-slate-800/50 p-1 rounded-xl border border-slate-100 dark:border-slate-700/50 mr-2">
+                            {[
+                                { to: "/", icon: LayoutDashboard, label: "Dashboard", color: "text-indigo-500" },
+                                { to: "/users", icon: User, label: "Users", color: "text-amber-500" },
+                                { to: "/services", icon: Wrench, label: "Services", color: "text-emerald-500" },
+                                { to: "/calendar", icon: CalendarIcon, label: "Calendar", color: "text-sky-500" },
+                                { to: "/reports", icon: FileSpreadsheet, label: "Reports", color: "text-purple-500" }
+                            ].map((item) => (
+                                <Link
+                                    key={item.to}
+                                    to={item.to}
+                                    title={item.label}
+                                    className="p-2 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-all hover:scale-110 active:scale-95 group"
+                                >
+                                    <item.icon size={18} className={`${item.color} opacity-80 group-hover:opacity-100`} />
+                                </Link>
+                            ))}
+                        </div>
+                    )}
+
+                    <div className="hidden md:flex flex-col text-right">
+                        <p className="font-bold text-sm text-slate-800 dark:text-slate-200 tracking-tight leading-none">{user?.name || 'User'}</p>
+                        <p className="text-indigo-600 dark:text-indigo-400 text-[9px] font-black tracking-widest mt-0.5">{getRoleDisplayName(user?.role)}</p>
                     </div>
 
                     <button
                         onClick={() => setDropdownOpen(!dropdownOpen)}
-                        className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all outline-none border-2 ${dropdownOpen ? 'border-indigo-500 shadow-md shadow-indigo-200 dark:shadow-indigo-900/50 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'border-slate-100 dark:border-slate-700 hover:border-indigo-200 dark:hover:border-indigo-500 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400'} active:scale-95`}
+                        className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all outline-none border-2 ${dropdownOpen ? 'border-indigo-500 shadow-md shadow-indigo-200 dark:shadow-indigo-900/50 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'border-slate-100 dark:border-slate-700 hover:border-indigo-200 dark:hover:border-indigo-500 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400'} active:scale-95`}
                     >
-                        {user?.name ? user.name.charAt(0).toUpperCase() : <User size={20} />}
+                        {user?.name ? user.name.charAt(0).toUpperCase() : <User size={18} />}
                     </button>
 
                     {/* Dropdown Menu */}
@@ -99,30 +121,41 @@ export function MainLayout() {
             </header>
 
             {/* Body segment */}
-            <div className="flex flex-1 overflow-hidden">
+            <div className="flex flex-1 overflow-hidden relative">
+                {/* Backdrop for mobile */}
+                {sidebarOpen && (
+                    <div
+                        className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-30 lg:hidden"
+                        onClick={() => setSidebarOpen(false)}
+                    />
+                )}
+
                 {/* Sidebar */}
-                <aside className={`${sidebarOpen ? 'w-64' : 'w-0'} transition-all duration-300 overflow-hidden bg-slate-900 dark:bg-slate-950 border-r border-slate-800 dark:border-slate-900 flex flex-col text-slate-300 shadow-xl z-0`}>
+                <aside className={`
+                    fixed inset-y-0 left-0 z-40 w-64 bg-slate-900 dark:bg-slate-950 border-r border-slate-800 dark:border-slate-900 flex flex-col text-slate-300 shadow-xl transition-transform duration-300 transform
+                    ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+                    lg:relative lg:translate-x-0 ${sidebarOpen ? 'lg:w-64' : 'lg:w-0'}
+                `}>
                     <nav className="p-4 space-y-1.5 flex-1 mt-2">
-                        <Link to="/" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 dark:hover:bg-slate-900 hover:text-white font-medium transition-all group">
-                            <LayoutDashboard size={20} className="text-slate-400 group-hover:text-indigo-400 transition-colors" />
-                            <span>Dashboard</span>
-                        </Link>
-                        <Link to="/users" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 dark:hover:bg-slate-900 hover:text-white font-medium transition-all group">
-                            <User size={20} className="text-slate-400 group-hover:text-amber-400 transition-colors" />
-                            <span>Users</span>
-                        </Link>
-                        <Link to="/services" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 dark:hover:bg-slate-900 hover:text-white font-medium transition-all group">
-                            <Wrench size={20} className="text-slate-400 group-hover:text-emerald-400 transition-colors" />
-                            <span>Services</span>
-                        </Link>
-                        <Link to="/calendar" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 dark:hover:bg-slate-900 hover:text-white font-medium transition-all group">
-                            <CalendarIcon size={20} className="text-slate-400 group-hover:text-sky-400 transition-colors" />
-                            <span>Calendar</span>
-                        </Link>
-                        <Link to="/reports" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 dark:hover:bg-slate-900 hover:text-white font-medium transition-all group">
-                            <FileSpreadsheet size={20} className="text-slate-400 group-hover:text-purple-400 transition-colors" />
-                            <span>Reports</span>
-                        </Link>
+                        {[
+                            { to: "/", icon: LayoutDashboard, label: "Dashboard", color: "indigo" },
+                            { to: "/users", icon: User, label: "Users", color: "amber" },
+                            { to: "/services", icon: Wrench, label: "Services", color: "emerald" },
+                            { to: "/calendar", icon: CalendarIcon, label: "Calendar", color: "sky" },
+                            { to: "/reports", icon: FileSpreadsheet, label: "Reports", color: "purple" }
+                        ].map((item) => (
+                            <Link
+                                key={item.to}
+                                to={item.to}
+                                onClick={() => {
+                                    if (window.innerWidth < 1024) setSidebarOpen(false);
+                                }}
+                                className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 dark:hover:bg-slate-900 hover:text-white font-medium transition-all group"
+                            >
+                                <item.icon size={20} className={`text-slate-400 group-hover:text-${item.color}-400 transition-colors`} />
+                                <span className={`${!sidebarOpen && 'lg:hidden'}`}>{item.label}</span>
+                            </Link>
+                        ))}
                     </nav>
 
                     <div className="p-4 border-t border-slate-800 dark:border-slate-900/50 text-xs text-slate-500 text-center">

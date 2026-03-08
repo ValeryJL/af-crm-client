@@ -42,8 +42,12 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
         description: '',
         start: '',
         end: '',
-        allDay: false
+        allDay: false,
+        type: 'EVENT' as 'EVENT' | 'TASK',
+        taskType: 'MAINTENANCE' as 'MAINTENANCE' | 'SERVICE' | 'EVENTUAL',
+        serviceId: '' as string | number
     });
+    const [availableServices, setAvailableServices] = useState<any[]>([]);
 
     // Auto-detect responsive view on mount
     useEffect(() => {
@@ -54,7 +58,17 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
 
     useEffect(() => {
         fetchData();
+        fetchServices();
     }, [currentDate, refreshTrigger, view]);
+
+    const fetchServices = async () => {
+        try {
+            const res = await apiClient.get('/services');
+            setAvailableServices(res.data);
+        } catch (err) {
+            console.error('Failed to fetch services', err);
+        }
+    };
 
     const fetchData = async () => {
         setLoading(true);
@@ -147,7 +161,10 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
             description: '',
             start: format(start, "yyyy-MM-dd'T'HH:mm"),
             end: format(end, "yyyy-MM-dd'T'HH:mm"),
-            allDay: false
+            allDay: false,
+            type: 'EVENT',
+            taskType: 'MAINTENANCE',
+            serviceId: ''
         });
         setShowCreateModal(true);
     };
@@ -160,7 +177,10 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
             description: item.description || '',
             start: format(item.start, "yyyy-MM-dd'T'HH:mm"),
             end: item.end ? format(item.end, "yyyy-MM-dd'T'HH:mm") : '',
-            allDay: item.allDay
+            allDay: item.allDay,
+            type: item.type,
+            taskType: 'MAINTENANCE', // Tasks from backend have types, but events don't
+            serviceId: item.serviceId || ''
         });
         setShowEditModal(true);
     };
@@ -168,13 +188,24 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
     const handleSaveEvent = async () => {
         setIsSaving(true);
         try {
-            await apiClient.post('/calendar/events', {
-                title: formData.title,
-                description: formData.description,
-                start: new Date(formData.start).toISOString(),
-                end: formData.end ? new Date(formData.end).toISOString() : null,
-                allDay: formData.allDay
-            });
+            if (formData.type === 'TASK') {
+                if (!formData.serviceId) {
+                    alert('Please select a service for this manual task.');
+                    return;
+                }
+                await apiClient.post(`/services/${formData.serviceId}/tasks/manual`, {
+                    type: formData.taskType,
+                    fechaProgramada: new Date(formData.start).toISOString()
+                });
+            } else {
+                await apiClient.post('/calendar/events', {
+                    title: formData.title,
+                    description: formData.description,
+                    start: formData.start, // Send raw local string for backend consistency
+                    end: formData.end || null,
+                    allDay: formData.allDay
+                });
+            }
             setShowCreateModal(false);
             fetchData();
         } catch (error) {
@@ -190,7 +221,7 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
         setIsSaving(true);
         try {
             await apiClient.patch(`/calendar/tasks/${selectedItem.id}/reprogram`, {
-                newDate: new Date(formData.start).toISOString()
+                newDate: formData.start // Send local string
             });
             setShowEditModal(false);
             fetchData();
@@ -209,8 +240,8 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
             await apiClient.put(`/calendar/events/${selectedItem.id}`, {
                 title: formData.title,
                 description: formData.description,
-                start: new Date(formData.start).toISOString(),
-                end: formData.end ? new Date(formData.end).toISOString() : null,
+                start: formData.start,
+                end: formData.end || null,
                 allDay: formData.allDay
             });
             setShowEditModal(false);
@@ -267,14 +298,18 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
                 <div className="p-2 bg-indigo-100 dark:bg-indigo-900/40 rounded-lg text-indigo-600">
                     <CalendarIcon size={24} />
                 </div>
-                <div className="flex flex-col">
-                    <span className="text-lg leading-tight">{format(currentDate, view === 'month' ? 'MMMM yyyy' : 'MMM d, yyyy')}</span>
-                    <span className="text-xs text-indigo-500 font-medium uppercase tracking-wider">{view} view</span>
+                <div className="flex flex-col flex-1">
+                    <span className="text-lg md:text-xl font-bold leading-tight">
+                        {window.innerWidth < 768
+                            ? format(currentDate, view === 'month' ? 'MMM yy' : 'MMM d')
+                            : format(currentDate, view === 'month' ? 'MMMM yyyy' : 'MMMM d, yyyy')}
+                    </span>
+                    <span className="text-[10px] md:text-xs text-indigo-500 font-black uppercase tracking-widest">{view} view</span>
                 </div>
                 {loading && <Loader2 size={18} className="animate-spin text-indigo-500" />}
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="calendar-header-actions">
                 <div className="view-selector bg-slate-100 dark:bg-slate-800 p-1 rounded-xl flex gap-1">
                     {(['month', 'week', 'agenda'] as CalendarView[]).map(v => (
                         <button
@@ -423,7 +458,7 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
                         <span className="text-xs font-bold text-indigo-500 uppercase">{format(item.start, 'EEE')}</span>
                         <span className="text-xl font-bold">{format(item.start, 'd')}</span>
                     </div>
-                    <div className="agenda-content flex-1">
+                    <div className="agenda-item-content flex-1">
                         <div className="flex justify-between items-start">
                             <h3 className={`font-bold flex items-center gap-2 ${item.status === 'RESOLVED' ? 'text-slate-400 line-through' : ''}`}>
                                 <span className={`w-2 h-2 rounded-full`} style={{ background: item.color }}></span>
@@ -432,9 +467,9 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
                             </h3>
                             <span className="text-[10px] uppercase font-black bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded-md">{item.type}</span>
                         </div>
-                        <p className="text-sm text-slate-500 mt-1">{item.description}</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{item.description}</p>
                         {item.end && (
-                            <div className="mt-2 text-xs text-slate-400">
+                            <div className="mt-2 text-xs text-slate-400 dark:text-slate-500">
                                 {format(item.start, 'p')} - {format(item.end, 'p')}
                             </div>
                         )}
@@ -470,33 +505,81 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
                 <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
                     <div className="modal-content" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
-                            <h2 className="modal-title">New Event</h2>
+                            <h2 className="modal-title">New Schedule Item</h2>
                             <button className="close-btn" onClick={() => setShowCreateModal(false)}><X size={20} /></button>
                         </div>
-                        <div className="modal-body">
-                            <div className="form-group">
-                                <label className="form-label">Title</label>
-                                <input
-                                    type="text"
-                                    className="form-input"
-                                    placeholder="Event title"
-                                    value={formData.title}
-                                    onChange={e => setFormData({ ...formData, title: e.target.value })}
-                                />
+                        <div className="modal-body space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="form-label">Item Type</label>
+                                    <select
+                                        className="form-select"
+                                        value={formData.type}
+                                        onChange={e => setFormData({ ...formData, type: e.target.value as any })}
+                                    >
+                                        <option value="EVENT">General Event</option>
+                                        <option value="TASK">Technical Visit (Manual)</option>
+                                    </select>
+                                </div>
+                                {formData.type === 'TASK' && (
+                                    <div>
+                                        <label className="form-label">Visit Type</label>
+                                        <select
+                                            className="form-select"
+                                            value={formData.taskType}
+                                            onChange={e => setFormData({ ...formData, taskType: e.target.value as any })}
+                                        >
+                                            <option value="MAINTENANCE">Maintenance</option>
+                                            <option value="SERVICE">Annual Service</option>
+                                            <option value="EVENTUAL">Eventual</option>
+                                        </select>
+                                    </div>
+                                )}
                             </div>
-                            <div className="form-group">
-                                <label className="form-label">Details</label>
+
+                            {formData.type === 'TASK' ? (
+                                <div>
+                                    <label className="form-label">Link to Service <span className="text-rose-500">*</span></label>
+                                    <select
+                                        className="form-select"
+                                        value={formData.serviceId}
+                                        onChange={e => setFormData({ ...formData, serviceId: e.target.value })}
+                                        required
+                                    >
+                                        <option value="">Select a service...</option>
+                                        {availableServices.map(s => (
+                                            <option key={s.id} value={s.id}>{s.cliente} - {s.nombre}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            ) : (
+                                <div>
+                                    <label className="form-label">Title <span className="text-rose-500">*</span></label>
+                                    <input
+                                        type="text"
+                                        className="form-input"
+                                        placeholder="Event title"
+                                        value={formData.title}
+                                        onChange={e => setFormData({ ...formData, title: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                            )}
+
+                            <div>
+                                <label className="form-label">Description / Details</label>
                                 <textarea
                                     className="form-textarea"
-                                    rows={3}
-                                    placeholder="Add description..."
+                                    rows={2}
+                                    placeholder="Add notes..."
                                     value={formData.description}
                                     onChange={e => setFormData({ ...formData, description: e.target.value })}
                                 />
                             </div>
+
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="form-group">
-                                    <label className="form-label">Start Date</label>
+                                <div>
+                                    <label className="form-label">Start Time</label>
                                     <input
                                         type="datetime-local"
                                         className="form-input"
@@ -504,21 +587,27 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
                                         onChange={e => setFormData({ ...formData, start: e.target.value })}
                                     />
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">End Date (Optional)</label>
-                                    <input
-                                        type="datetime-local"
-                                        className="form-input"
-                                        value={formData.end}
-                                        onChange={e => setFormData({ ...formData, end: e.target.value })}
-                                    />
-                                </div>
+                                {formData.type === 'EVENT' && (
+                                    <div>
+                                        <label className="form-label">End Time (Optional)</label>
+                                        <input
+                                            type="datetime-local"
+                                            className="form-input"
+                                            value={formData.end}
+                                            onChange={e => setFormData({ ...formData, end: e.target.value })}
+                                        />
+                                    </div>
+                                )}
                             </div>
                         </div>
                         <div className="modal-footer">
                             <button className="btn btn-secondary" onClick={() => setShowCreateModal(false)}>Cancel</button>
-                            <button className="btn btn-primary" onClick={handleSaveEvent} disabled={isSaving || !formData.title}>
-                                {isSaving ? <Loader2 size={18} className="animate-spin" /> : 'Create Event'}
+                            <button
+                                className="btn btn-primary"
+                                onClick={handleSaveEvent}
+                                disabled={isSaving || (formData.type === 'EVENT' ? !formData.title : !formData.serviceId)}
+                            >
+                                {isSaving ? <Loader2 size={18} className="animate-spin" /> : 'Confirm & Schedule'}
                             </button>
                         </div>
                     </div>
@@ -542,10 +631,10 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
                             {selectedItem.type === 'TASK' ? (
                                 <div className="space-y-4">
                                     <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800">
-                                        <div className="font-bold text-lg mb-1">{selectedItem.title}</div>
-                                        <div className="text-sm text-slate-500 flex flex-col gap-1">
+                                        <div className="font-bold text-lg mb-1 text-slate-800 dark:text-slate-100">{selectedItem.title}</div>
+                                        <div className="text-sm text-slate-500 dark:text-slate-400 flex flex-col gap-1">
                                             <div className="flex items-center gap-2">
-                                                <Clock size={14} />
+                                                <Clock size={14} className="text-indigo-400" />
                                                 {selectedItem.status === 'UNASSIGNED'
                                                     ? 'Not yet scheduled'
                                                     : `Scheduled for ${format(selectedItem.start, 'PPP p')}`
@@ -559,7 +648,7 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
                                             )}
                                         </div>
                                     </div>
-                                    <div className="form-group">
+                                    <div>
                                         <label className="form-label">{selectedItem.status === 'UNASSIGNED' ? 'Assign Date & Time' : 'Reprogram Date & Time'}</label>
                                         <input
                                             type="datetime-local"
@@ -568,7 +657,7 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
                                             onChange={e => setFormData({ ...formData, start: e.target.value })}
                                         />
                                     </div>
-                                    <p className="text-xs text-slate-400 italic">
+                                    <p className="text-xs text-slate-400 dark:text-slate-500 italic">
                                         {selectedItem.status === 'UNASSIGNED'
                                             ? 'Assigning a date will move this task to PENDING status.'
                                             : 'Changing the date will update the work schedule.'}
@@ -576,7 +665,7 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
                                     <div className="pt-4 mt-2 border-t border-slate-100 dark:border-slate-800">
                                         <button
                                             className="text-xs font-bold text-indigo-500 hover:text-indigo-600 flex items-center gap-1 group"
-                                            onClick={() => navigate(`/services?search=${selectedItem.title}`)}
+                                            onClick={() => navigate(`/services/${selectedItem.serviceId}`)}
                                         >
                                             View Full Service Record
                                             <ExternalLink size={12} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
@@ -585,7 +674,7 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
                                 </div>
                             ) : (
                                 <>
-                                    <div className="form-group">
+                                    <div className="form-group mb-4">
                                         <label className="form-label">Title</label>
                                         <input
                                             type="text"
@@ -594,7 +683,7 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
                                             onChange={e => setFormData({ ...formData, title: e.target.value })}
                                         />
                                     </div>
-                                    <div className="form-group">
+                                    <div className="form-group mb-4">
                                         <label className="form-label">Description</label>
                                         <textarea
                                             className="form-textarea"
@@ -644,11 +733,11 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
                             <div className="flex gap-2">
                                 <button className="btn btn-secondary" onClick={() => setShowEditModal(false)}>Close</button>
                                 {selectedItem.type === 'TASK' ? (
-                                    <button className="btn btn-primary bg-indigo-600 hover:bg-indigo-700" onClick={handleReprogramTask} disabled={isSaving || !formData.start}>
+                                    <button className="btn btn-primary bg-indigo-600 hover:bg-indigo-700 font-bold" onClick={handleReprogramTask} disabled={isSaving || !formData.start}>
                                         {isSaving ? <Loader2 size={18} className="animate-spin" /> : (selectedItem.status === 'UNASSIGNED' ? 'Assign Date' : 'Update Schedule')}
                                     </button>
                                 ) : (
-                                    <button className="btn btn-primary" onClick={handleUpdateEvent} disabled={isSaving || !formData.title}>
+                                    <button className="btn btn-primary font-bold" onClick={handleUpdateEvent} disabled={isSaving || !formData.title}>
                                         {isSaving ? <Loader2 size={18} className="animate-spin" /> : 'Save Changes'}
                                     </button>
                                 )}

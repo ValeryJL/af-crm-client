@@ -132,8 +132,6 @@ export function ServiceDetail() {
         if (!assigningTask || !assignDate) return;
         setIsAssigning(true);
         try {
-            // Backend /assign expects a LocalDate (date-only string like "2026-03-06")
-            // The /reprogram endpoint accepts full ISO datetime
             const isReprogram = assigningTask.status !== 'UNASSIGNED';
             const endpoint = isReprogram
                 ? `/calendar/tasks/${assigningTask.id}/reprogram`
@@ -193,22 +191,22 @@ export function ServiceDetail() {
         <div className="space-y-6">
             {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-slate-200 dark:border-slate-700">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 w-full sm:w-auto">
                     <button
                         onClick={() => navigate('/services')}
-                        className="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                        className="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shrink-0"
                     >
                         <ArrowLeft size={20} />
                     </button>
-                    <div>
-                        <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">{service.cliente}</h1>
-                        <p className="text-slate-500 dark:text-slate-400 mt-0.5">{service.nombre}</p>
+                    <div className="min-w-0 pr-2">
+                        <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight truncate">{service.cliente}</h1>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 truncate">{service.nombre}</p>
                     </div>
                 </div>
                 {isAdmin && (
                     <button
                         onClick={openEdit}
-                        className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-medium transition-all shadow-md shadow-indigo-200 hover:shadow-lg hover:-translate-y-0.5"
+                        className="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-medium transition-all shadow-md shadow-indigo-200 hover:shadow-lg hover:-translate-y-0.5 w-full sm:w-auto"
                     >
                         <Edit2 size={18} />
                         <span>Edit Service</span>
@@ -348,24 +346,24 @@ export function ServiceDetail() {
 
             {/* Assign / Reprogram Modal */}
             {assigningTask && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-fade-in-up">
-                        <div className="flex justify-between items-center p-6 border-b border-slate-100 dark:border-slate-700">
-                            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">
+                <div className="modal-overlay">
+                    <div className="modal-content !max-w-sm">
+                        <div className="modal-header">
+                            <h2 className="modal-title">
                                 {assigningTask.status === 'UNASSIGNED' ? 'Assign Date' : 'Reprogram Visit'}
                             </h2>
-                            <button onClick={() => setAssigningTask(null)} className="text-slate-400 hover:text-rose-500 transition-colors">
+                            <button onClick={() => setAssigningTask(null)} className="close-btn">
                                 <X size={20} />
                             </button>
                         </div>
-                        <div className="p-6 space-y-4">
+                        <div className="modal-body space-y-4">
                             <div>
-                                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Date & Time</label>
+                                <label className="form-label">Date & Time</label>
                                 <input
                                     type="datetime-local"
                                     value={assignDate}
                                     onChange={e => setAssignDate(e.target.value)}
-                                    className="w-full px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                                    className="form-input"
                                 />
                                 <p className="mt-1 text-[10px] text-slate-400 italic">
                                     {assigningTask.status === 'UNASSIGNED'
@@ -373,19 +371,19 @@ export function ServiceDetail() {
                                         : 'This will update the scheduled date for this visit.'}
                                 </p>
                             </div>
-                            <div className="flex gap-3 justify-end">
-                                <button onClick={() => setAssigningTask(null)} className="px-4 py-2 rounded-xl font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 transition-colors text-sm">
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleAssignDate}
-                                    disabled={isAssigning || !assignDate}
-                                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white px-4 py-2 rounded-xl font-medium text-sm transition-colors shadow-md shadow-indigo-200"
-                                >
-                                    {isAssigning ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
-                                    Confirm
-                                </button>
-                            </div>
+                        </div>
+                        <div className="modal-footer">
+                            <button onClick={() => setAssigningTask(null)} className="btn btn-secondary">
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleAssignDate}
+                                disabled={isAssigning || !assignDate}
+                                className="btn btn-primary flex items-center gap-2"
+                            >
+                                {isAssigning ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
+                                Confirm
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -393,72 +391,74 @@ export function ServiceDetail() {
 
             {/* Edit Service Modal */}
             {isEditOpen && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
-                    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-fade-in-up my-8">
-                        <div className="flex justify-between items-center p-6 border-b border-slate-100 dark:border-slate-700">
-                            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Edit Service</h2>
-                            <button onClick={() => setIsEditOpen(false)} className="text-slate-400 hover:text-rose-500 transition-colors">
+                <div className="modal-overlay">
+                    <div className="modal-content">
+                        <div className="modal-header">
+                            <h2 className="modal-title">Edit Service</h2>
+                            <button onClick={() => setIsEditOpen(false)} className="close-btn">
                                 <X size={20} />
                             </button>
                         </div>
-                        <form onSubmit={handleEditSave} className="p-6 flex flex-col gap-4">
-                            <div className="flex flex-col sm:flex-row gap-4">
-                                <div className="flex-1">
-                                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Client <span className="text-rose-500">*</span></label>
-                                    <input required value={formData.cliente || ''} onChange={e => setFormData({ ...formData, cliente: e.target.value })}
-                                        className="w-full px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none" />
+                        <form onSubmit={handleEditSave} className="flex flex-col h-full overflow-hidden">
+                            <div className="modal-body space-y-4">
+                                <div className="flex flex-col sm:flex-row gap-4">
+                                    <div className="flex-1">
+                                        <label className="form-label">Client <span className="text-rose-500">*</span></label>
+                                        <input required value={formData.cliente || ''} onChange={e => setFormData({ ...formData, cliente: e.target.value })}
+                                            className="form-input" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <label className="form-label">Title <span className="text-rose-500">*</span></label>
+                                        <input required value={formData.nombre || ''} onChange={e => setFormData({ ...formData, nombre: e.target.value })}
+                                            className="form-input" />
+                                    </div>
                                 </div>
-                                <div className="flex-1">
-                                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Title <span className="text-rose-500">*</span></label>
-                                    <input required value={formData.nombre || ''} onChange={e => setFormData({ ...formData, nombre: e.target.value })}
-                                        className="w-full px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none" />
+                                <div>
+                                    <label className="form-label">Equipment <span className="text-rose-500">*</span></label>
+                                    <input required value={formData.equipo || ''} onChange={e => setFormData({ ...formData, equipo: e.target.value })}
+                                        className="form-input" />
+                                </div>
+                                <div>
+                                    <label className="form-label">Address <span className="text-rose-500">*</span></label>
+                                    <input required value={formData.direccion || ''} onChange={e => setFormData({ ...formData, direccion: e.target.value })}
+                                        className="form-input" />
+                                </div>
+                                <div>
+                                    <label className="form-label">Frequency</label>
+                                    <select value={formData.frecuencia || 'mensual'} onChange={e => setFormData({ ...formData, frecuencia: e.target.value })}
+                                        className="form-select">
+                                        <option value="mensual">Mensual</option>
+                                        <option value="semanal">Semanal</option>
+                                        <option value="quincenal">Quincenal</option>
+                                        <option value="eventual">EVENTUAL</option>
+                                    </select>
+                                </div>
+                                <div className="flex flex-col sm:flex-row gap-4">
+                                    <div className="flex-1">
+                                        <label className="form-label">Start Date</label>
+                                        <input type="date" value={formData.fechaInicio || ''} onChange={e => setFormData({ ...formData, fechaInicio: e.target.value })}
+                                            className="form-input" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <label className="form-label">End Date</label>
+                                        <input type="date" value={formData.fechaFin || ''} onChange={e => setFormData({ ...formData, fechaFin: e.target.value })}
+                                            className="form-input" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="form-label">Observations</label>
+                                    <textarea rows={2} value={formData.observaciones || ''} onChange={e => setFormData({ ...formData, observaciones: e.target.value })}
+                                        className="form-textarea resize-none" />
+                                </div>
+                                <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 text-xs text-amber-700 dark:text-amber-400 font-medium">
+                                    ⚠️ Saving will erase all future unassigned tasks and regenerate them based on the new configuration.
                                 </div>
                             </div>
-                            <div>
-                                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Equipment <span className="text-rose-500">*</span></label>
-                                <input required value={formData.equipo || ''} onChange={e => setFormData({ ...formData, equipo: e.target.value })}
-                                    className="w-full px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Address <span className="text-rose-500">*</span></label>
-                                <input required value={formData.direccion || ''} onChange={e => setFormData({ ...formData, direccion: e.target.value })}
-                                    className="w-full px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Frequency</label>
-                                <select value={formData.frecuencia || 'mensual'} onChange={e => setFormData({ ...formData, frecuencia: e.target.value })}
-                                    className="w-full px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none">
-                                    <option value="mensual">Mensual</option>
-                                    <option value="semanal">Semanal</option>
-                                    <option value="quincenal">Quincenal</option>
-                                    <option value="eventual">EVENTUAL</option>
-                                </select>
-                            </div>
-                            <div className="flex flex-col sm:flex-row gap-4">
-                                <div className="flex-1">
-                                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Start Date</label>
-                                    <input type="date" value={formData.fechaInicio || ''} onChange={e => setFormData({ ...formData, fechaInicio: e.target.value })}
-                                        className="w-full px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none" />
-                                </div>
-                                <div className="flex-1">
-                                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">End Date</label>
-                                    <input type="date" value={formData.fechaFin || ''} onChange={e => setFormData({ ...formData, fechaFin: e.target.value })}
-                                        className="w-full px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none" />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Observations</label>
-                                <textarea rows={2} value={formData.observaciones || ''} onChange={e => setFormData({ ...formData, observaciones: e.target.value })}
-                                    className="w-full px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none resize-none" />
-                            </div>
-                            <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 text-xs text-amber-700 dark:text-amber-400 font-medium">
-                                ⚠️ Saving will erase all future unassigned tasks and regenerate them based on the new configuration.
-                            </div>
-                            <div className="flex gap-3 justify-end mt-2">
-                                <button type="button" onClick={() => setIsEditOpen(false)} className="px-5 py-2.5 rounded-xl font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 transition-colors">
+                            <div className="modal-footer">
+                                <button type="button" onClick={() => setIsEditOpen(false)} className="btn btn-secondary">
                                     Cancel
                                 </button>
-                                <button type="submit" disabled={isSubmitting} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white px-5 py-2.5 rounded-xl font-medium transition-colors shadow-md shadow-indigo-200">
+                                <button type="submit" disabled={isSubmitting} className="btn btn-primary flex items-center gap-2">
                                     {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <Edit2 size={18} />}
                                     Save Changes
                                 </button>
