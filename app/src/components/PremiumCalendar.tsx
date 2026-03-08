@@ -126,14 +126,17 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
 
                 mappedEvents = rawEvents.map((e: any) => {
                     const dateVal = e.start || e.fecha || e.fechaProgramada || e.scheduledDate || e.date;
-                    const startDate = dateVal ? new Date(dateVal) : new Date();
+                    // Force the browser to treat it as local time by replacing T with space
+                    const startDate = (typeof dateVal === 'string' && dateVal.includes('T'))
+                        ? new Date(dateVal.replace('T', ' '))
+                        : (dateVal ? new Date(dateVal) : new Date());
 
                     return {
                         id: e.id,
                         title: e.title || e.nombre || 'Event',
                         description: e.description || e.observaciones || '',
                         start: startDate,
-                        end: e.end ? new Date(e.end) : undefined,
+                        end: e.end ? (typeof e.end === 'string' ? new Date(e.end.replace('T', ' ')) : new Date(e.end)) : undefined,
                         allDay: e.allDay ?? false,
                         type: 'EVENT',
                         status: e.status,
@@ -143,7 +146,10 @@ export const PremiumCalendar: React.FC<PremiumCalendarProps> = ({ refreshTrigger
 
                 mappedAssignedTasks = rawTasks.map((t: any) => {
                     const dateVal = t.fechaProgramada || t.scheduledDate || t.fecha || t.date;
-                    const scheduledDate = dateVal ? new Date(dateVal) : null;
+                    // Force the browser to treat it as local time by replacing T with space
+                    const scheduledDate = (typeof dateVal === 'string' && dateVal.includes('T'))
+                        ? new Date(dateVal.replace('T', ' '))
+                        : (dateVal ? new Date(dateVal) : null);
                     const status = (t.status || 'PENDING').toString().toUpperCase() as CalendarItem['status'];
                     const isOverdue = status === 'PENDING' && scheduledDate && scheduledDate < new Date();
 
