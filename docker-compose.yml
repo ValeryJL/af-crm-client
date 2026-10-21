@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+      args:
+        - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
+        - VITE_API_URL=${VITE_API_URL}
+    ports:
+      - "3000:80"
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
