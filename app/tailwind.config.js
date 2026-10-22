@@ -10,21 +10,31 @@ export default {
             colors: {
                 af: {
                     dark: '#1e2022',
-                    charcoal: '#2d2f31',
+                    charcoal: '#282a2d',
                     gray: '#3a3b3b',
-                    lightgray: '#4b4d4f',
-                    border: '#374151',
+                    lightgray: '#525456',
+                    border: '#3f4246',
                     surface: '#ffffff',
-                    accent: '#2563eb', // Royal Blue industrial
-                    cyan: '#0284c7',   // NuSA celeste soberano accent
-                    alertRed: '#e11d48',
-                    alertAmber: '#d97706',
-                    alertOrange: '#ea580c',
+                    accent: '#d97706', // Ámbar / Oro industrial AF
+                    accentHover: '#b45309',
+                    red: '#dc2626',
+                    green: '#16a34a',
                 }
             },
             fontFamily: {
                 heading: ['Outfit', 'Inter', 'sans-serif'],
                 sans: ['Inter', 'system-ui', 'sans-serif'],
+            },
+            borderRadius: {
+                'none': '0px',
+                'sm': '2px',
+                'DEFAULT': '4px',
+                'md': '4px',
+                'lg': '6px',
+                'xl': '8px',
+                '2xl': '8px',
+                '3xl': '10px',
+                'full': '9999px',
             }
         },
     },
