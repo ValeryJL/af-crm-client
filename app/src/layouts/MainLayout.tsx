@@ -1,7 +1,7 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
     Menu, User, LayoutDashboard, Moon, Sun, LogOut, Settings as SettingsIcon,
-    Building2, Wrench, HardHat, FileText, Search, Bell, X
+    Building2, Wrench, HardHat, FileText, Search, Bell, X, Calendar
 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
@@ -59,6 +59,7 @@ export function MainLayout() {
             title: "Operaciones & SLA",
             items: [
                 { to: "/", icon: LayoutDashboard, label: "Centro de Control SLA", badge: alertsCount > 0 ? alertsCount : null },
+                { to: "/planner", icon: Calendar, label: "Planificador Semanal" },
                 { to: "/work-orders", icon: FileText, label: "Órdenes de Trabajo" },
             ]
         },

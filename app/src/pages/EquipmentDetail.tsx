@@ -3,14 +3,22 @@ import { crmApi } from '../api/crm';
 import type { EquipmentDto, EquipmentPartDto } from '../api/crm';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
-    ArrowLeft, Plus, HardHat, Wrench, AlertTriangle, Check, Trash2, Calendar, X
+    ArrowLeft, Plus, HardHat, Wrench, AlertTriangle, Check, Trash2, Calendar, X, Edit3, AlertCircle
 } from 'lucide-react';
+import { EquipmentSpecsBuilder } from '../components/EquipmentSpecsBuilder';
 
 export function EquipmentDetail() {
     const { id } = useParams<{ id: string }>();
     const [equipment, setEquipment] = useState<EquipmentDto | null>(null);
     const [loading, setLoading] = useState(true);
     const [showPartModal, setShowPartModal] = useState(false);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+    const [editForm, setEditForm] = useState<Partial<EquipmentDto>>({});
+    const [specsData, setSpecsData] = useState<Record<string, any>>({});
+
     const [partForm, setPartForm] = useState<Partial<EquipmentPartDto>>({
         nombreParte: '',
         codigoRepuesto: '',
@@ -29,10 +37,33 @@ export function EquipmentDetail() {
             setLoading(true);
             const res = await crmApi.getEquipmentById(eqId);
             setEquipment(res.data);
+            setEditForm(res.data);
+            setSpecsData(res.data.specs || {});
         } catch (e) {
             console.error('Error loading equipment:', e);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleUpdateEquipment = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!equipment?.id) return;
+        setErrorMsg(null);
+
+        try {
+            setSaving(true);
+            await crmApi.updateEquipment(equipment.id, {
+                ...editForm,
+                specs: specsData
+            } as EquipmentDto);
+            setShowEditModal(false);
+            loadData(equipment.id);
+        } catch (e: any) {
+            console.error('Error updating equipment:', e);
+            setErrorMsg(e.response?.data?.message || e.message || 'Error al actualizar equipo');
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -66,29 +97,43 @@ export function EquipmentDetail() {
     return (
         <div className="space-y-6 animate-fade-in">
             {/* Header / Navegación */}
-            <div className="flex items-center gap-3 pb-4 border-b border-slate-300 dark:border-[#333639]">
-                <button 
-                    onClick={() => navigate(`/services/${equipment.serviceId}`)} 
-                    className="p-2 text-slate-400 hover:text-white hover:bg-slate-200 dark:hover:bg-[#282a2d] rounded-none transition-colors"
-                    title="Volver a Sede"
-                >
-                    <ArrowLeft className="w-5 h-5" />
-                </button>
-                <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                        <span className="w-2.5 h-6 bg-amber-500 inline-block"></span>
-                        <h1 className="text-xl sm:text-2xl font-heading font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">
-                            {equipment.nombre}
-                        </h1>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-300 dark:border-[#333639]">
+                <div className="flex items-center gap-3">
+                    <button 
+                        onClick={() => navigate(`/services/${equipment.serviceId}`)} 
+                        className="p-2 text-slate-400 hover:text-white hover:bg-slate-200 dark:hover:bg-[#282a2d] rounded-none transition-colors"
+                        title="Volver a Sede"
+                    >
+                        <ArrowLeft className="w-5 h-5" />
+                    </button>
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <span className="w-2.5 h-6 bg-amber-500 inline-block"></span>
+                            <h1 className="text-xl sm:text-2xl font-heading font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">
+                                {equipment.nombre}
+                            </h1>
+                        </div>
+                        <p className="text-xs text-slate-400 mt-0.5 pl-4.5 font-mono">
+                            {equipment.marca} {equipment.modelo} — Instalado en: {equipment.serviceNombre} ({equipment.clientRazonSocial})
+                        </p>
                     </div>
-                    <p className="text-xs text-slate-400 mt-0.5 pl-4.5 font-mono">
-                        {equipment.marca} {equipment.modelo} — Instalado en: {equipment.serviceNombre} ({equipment.clientRazonSocial})
-                    </p>
                 </div>
+
+                <button
+                    onClick={() => {
+                        setEditForm(equipment);
+                        setSpecsData(equipment.specs || {});
+                        setShowEditModal(true);
+                    }}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-none font-heading font-bold text-xs uppercase tracking-wider transition-colors shadow-xs self-start sm:self-auto"
+                >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span>Editar Ficha Técnica</span>
+                </button>
             </div>
 
             {/* Quick Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                 <div className="bg-white dark:bg-[#1e2022] p-4 rounded-none border border-slate-300 dark:border-[#333639] shadow-xs">
                     <span className="text-[10px] font-mono font-bold uppercase text-slate-400 block tracking-wider">Horómetro Actual</span>
                     <span className="text-2xl font-heading font-black text-slate-800 dark:text-slate-100 mt-1 block">
@@ -96,15 +141,32 @@ export function EquipmentDetail() {
                     </span>
                 </div>
                 <div className="bg-white dark:bg-[#1e2022] p-4 rounded-none border border-slate-300 dark:border-[#333639] shadow-xs">
-                    <span className="text-[10px] font-mono font-bold uppercase text-slate-400 block tracking-wider">Próximo Service Mayor</span>
-                    <span className="text-xl font-heading font-bold text-slate-800 dark:text-slate-100 mt-1 block font-mono">
-                        {equipment.fechaProximoServiceMayor || 'No definido'}
+                    <span className="text-[10px] font-mono font-bold uppercase text-amber-500 block tracking-wider">Preventivo Regular</span>
+                    <span className="text-sm font-heading font-bold text-slate-800 dark:text-slate-100 mt-1 block font-mono">
+                        {equipment.periodicidadRegular || 'MENSUAL'}
+                        {equipment.intervaloHorasRegular ? ` (${equipment.intervaloHorasRegular} hs)` : ''}
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-mono mt-1 block">
+                        Próx: {equipment.fechaProximaVisitaRegular || 'Calculando'}
                     </span>
                 </div>
                 <div className="bg-white dark:bg-[#1e2022] p-4 rounded-none border border-slate-300 dark:border-[#333639] shadow-xs">
-                    <span className="text-[10px] font-mono font-bold uppercase text-slate-400 block tracking-wider">Ubicación / N° Serie</span>
-                    <span className="text-xs font-mono font-bold text-slate-800 dark:text-slate-100 mt-2 block truncate">
-                        {equipment.ubicacion || 'N/A'} — S/N: {equipment.numeroSerie || 'N/A'}
+                    <span className="text-[10px] font-mono font-bold uppercase text-slate-400 block tracking-wider">Service Mayor (Overhaul)</span>
+                    <span className="text-sm font-heading font-bold text-slate-800 dark:text-slate-100 mt-1 block font-mono">
+                        {equipment.periodicidadServiceMayor || 'ANUAL'}
+                        {equipment.intervaloHorasService ? ` (${equipment.intervaloHorasService} hs)` : ''}
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-mono mt-1 block">
+                        {equipment.fechaProximoServiceMayor || 'No agendado'}
+                    </span>
+                </div>
+                <div className="bg-white dark:bg-[#1e2022] p-4 rounded-none border border-slate-300 dark:border-[#333639] shadow-xs">
+                    <span className="text-[10px] font-mono font-bold uppercase text-slate-400 block tracking-wider">N° Serie & Ubicación</span>
+                    <span className="text-xs font-mono font-bold text-slate-800 dark:text-slate-100 mt-1 block truncate">
+                        S/N: {equipment.numeroSerie || 'N/A'}
+                    </span>
+                    <span className="text-[11px] text-slate-400 font-mono mt-1 block truncate">
+                        {equipment.ubicacion || 'Sin ubicación específica'}
                     </span>
                 </div>
             </div>
@@ -275,6 +337,191 @@ export function EquipmentDetail() {
                                     className="px-4 py-1.5 text-xs font-heading font-bold text-white bg-amber-600 hover:bg-amber-500 rounded-none shadow-xs uppercase tracking-wider transition-colors"
                                 >
                                     Guardar Parte
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+            {/* Modal Editar Ficha Técnica y Parámetros */}
+            {showEditModal && (
+                <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+                    <div className="bg-white dark:bg-[#1e2022] border border-slate-300 dark:border-[#333639] rounded-none max-w-xl w-full p-5 shadow-2xl">
+                        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-[#333639]">
+                            <h3 className="text-sm font-heading font-black text-slate-800 dark:text-slate-100 uppercase tracking-wide">
+                                Editar Ficha Técnica: {equipment.nombre}
+                            </h3>
+                            <button onClick={() => setShowEditModal(false)} className="text-slate-400 hover:text-white">
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                        <form onSubmit={handleUpdateEquipment} className="mt-4 space-y-3 max-h-[80vh] overflow-y-auto pr-1">
+                            <div>
+                                <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">Nombre / Identificador *</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={editForm.nombre || ''}
+                                    onChange={(e) => setEditForm({ ...editForm, nombre: e.target.value })}
+                                    className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500 font-mono"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div>
+                                    <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">Marca</label>
+                                    <input
+                                        type="text"
+                                        value={editForm.marca || ''}
+                                        onChange={(e) => setEditForm({ ...editForm, marca: e.target.value })}
+                                        className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">Modelo</label>
+                                    <input
+                                        type="text"
+                                        value={editForm.modelo || ''}
+                                        onChange={(e) => setEditForm({ ...editForm, modelo: e.target.value })}
+                                        className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">N° de Serie</label>
+                                    <input
+                                        type="text"
+                                        value={editForm.numeroSerie || ''}
+                                        onChange={(e) => setEditForm({ ...editForm, numeroSerie: e.target.value })}
+                                        className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500 font-mono"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Periodicidades */}
+                            <div className="p-3 bg-slate-50 dark:bg-[#141517] border border-slate-300 dark:border-[#333639] space-y-3 rounded-none">
+                                <span className="text-[10px] font-mono font-bold uppercase text-amber-500 tracking-wider block">
+                                    Periodicidad de Mantenimiento del Equipo
+                                </span>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
+                                            Preventivo Regular (Rutina)
+                                        </label>
+                                        <select
+                                            value={editForm.periodicidadRegular || 'MENSUAL'}
+                                            onChange={(e) => setEditForm({ ...editForm, periodicidadRegular: e.target.value })}
+                                            className="w-full text-xs p-2 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#1e2022] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500 font-mono"
+                                        >
+                                            <option value="SEMANAL">Semanal</option>
+                                            <option value="QUINCENAL">Quincenal</option>
+                                            <option value="MENSUAL">Mensual</option>
+                                            <option value="BIMESTRAL">Bimestral</option>
+                                            <option value="TRIMESTRAL">Trimestral</option>
+                                            <option value="SEMESTRAL">Semestral</option>
+                                            <option value="ANUAL">Anual</option>
+                                            <option value="HORAS">Por Horas de Marcha</option>
+                                            <option value="A_DEMANDA">A Demanda</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
+                                            Intervalo Horas (Regular)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            placeholder="250 hs"
+                                            value={editForm.intervaloHorasRegular ?? ''}
+                                            onChange={(e) => setEditForm({ ...editForm, intervaloHorasRegular: parseInt(e.target.value) || undefined })}
+                                            className="w-full text-xs p-2 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#1e2022] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500 font-mono"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
+                                            Service Mayor / Overhaul
+                                        </label>
+                                        <select
+                                            value={editForm.periodicidadServiceMayor || 'ANUAL'}
+                                            onChange={(e) => setEditForm({ ...editForm, periodicidadServiceMayor: e.target.value })}
+                                            className="w-full text-xs p-2 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#1e2022] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500 font-mono"
+                                        >
+                                            <option value="ANUAL">Anual</option>
+                                            <option value="BIANUAL">Bianual (2 Años)</option>
+                                            <option value="HORAS">Por Horas (1000 hs)</option>
+                                            <option value="NINGUNA">No Aplica</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
+                                            Intervalo Horas (Mayor)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            placeholder="1000 hs"
+                                            value={editForm.intervaloHorasService ?? ''}
+                                            onChange={(e) => setEditForm({ ...editForm, intervaloHorasService: parseInt(e.target.value) || undefined })}
+                                            className="w-full text-xs p-2 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#1e2022] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500 font-mono"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
+                                            Horómetro Actual (hs)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            step="0.1"
+                                            value={editForm.horometroActual ?? 0}
+                                            onChange={(e) => setEditForm({ ...editForm, horometroActual: parseFloat(e.target.value) || 0 })}
+                                            className="w-full text-xs p-2 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#1e2022] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500 font-mono"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
+                                            Ubicación Física en Planta
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="Sala de máquinas / Azotea"
+                                            value={editForm.ubicacion || ''}
+                                            onChange={(e) => setEditForm({ ...editForm, ubicacion: e.target.value })}
+                                            className="w-full text-xs p-2 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#1e2022] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Dynamic Specs Builder Component */}
+                            <EquipmentSpecsBuilder
+                                value={specsData}
+                                onChange={(specs) => setSpecsData(specs)}
+                            />
+
+                            {errorMsg && (
+                                <div className="p-3 bg-rose-500/10 border border-rose-500/30 text-rose-500 text-xs flex items-center gap-2">
+                                    <AlertCircle className="w-4 h-4 shrink-0" />
+                                    <span>{errorMsg}</span>
+                                </div>
+                            )}
+
+                            <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-200 dark:border-[#333639]">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowEditModal(false)}
+                                    className="px-3.5 py-1.5 text-xs font-bold text-slate-400 hover:text-white rounded-none transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={saving}
+                                    className="px-4 py-1.5 text-xs font-heading font-bold text-white bg-amber-600 hover:bg-amber-500 rounded-none shadow-xs uppercase tracking-wider transition-colors disabled:opacity-50"
+                                >
+                                    {saving ? 'Guardando...' : 'Guardar Cambios'}
                                 </button>
                             </div>
                         </form>

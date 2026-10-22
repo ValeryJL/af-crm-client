@@ -70,8 +70,14 @@ export interface EquipmentDto {
     numeroSerie?: string;
     ubicacion?: string;
     horometroActual?: number;
+    periodicidadRegular?: string; // SEMANAL, QUINCENAL, MENSUAL, BIMESTRAL, TRIMESTRAL, SEMESTRAL, ANUAL, HORAS, NINGUNA
+    intervaloHorasRegular?: number; // e.g. 250
+    fechaUltimaVisitaRegular?: string;
+    fechaProximaVisitaRegular?: string;
+    periodicidadServiceMayor?: string; // ANUAL, BIANUAL, HORAS, NINGUNA
+    intervaloHorasService?: number; // e.g. 1000
+    fechaUltimoServiceMayor?: string;
     fechaProximoServiceMayor?: string;
-    intervaloHorasService?: number;
     specs?: Record<string, any>;
     notas?: string;
     activo?: boolean;
@@ -149,8 +155,19 @@ export const crmApi = {
     getWorkOrdersByService: (serviceId: number) => apiClient.get<WorkOrderDto[]>(`/work-orders/service/${serviceId}`),
     getWorkOrderById: (id: number) => apiClient.get<WorkOrderDto>(`/work-orders/${id}`),
     createWorkOrder: (wo: WorkOrderDto) => apiClient.post<WorkOrderDto>('/work-orders', wo),
+    updateWorkOrder: (id: number, wo: Partial<WorkOrderDto>) => apiClient.put<WorkOrderDto>(`/work-orders/${id}`, wo),
+    scheduleWorkOrder: (id: number, fechaProgramada?: string, tecnicoId?: number) => {
+        const params = new URLSearchParams();
+        if (fechaProgramada) params.append('fechaProgramada', fechaProgramada);
+        if (tecnicoId) params.append('tecnicoId', tecnicoId.toString());
+        return apiClient.patch<WorkOrderDto>(`/work-orders/${id}/schedule?${params.toString()}`);
+    },
     updateWorkOrderStatus: (id: number, status: string) => apiClient.patch<WorkOrderDto>(`/work-orders/${id}/status?status=${status}`),
     completeWorkOrder: (id: number, closeData: Partial<WorkOrderDto>) => apiClient.post<WorkOrderDto>(`/work-orders/${id}/complete`, closeData),
+    deleteWorkOrder: (id: number) => apiClient.delete(`/work-orders/${id}`),
+
+    // Users / Technicians
+    getUsers: () => apiClient.get<any[]>('/users'),
 
     // Alerts
     getAlerts: () => apiClient.get<SlaAlertDto[]>('/alerts'),

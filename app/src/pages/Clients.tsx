@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { crmApi } from '../api/crm';
 import type { ClientDto } from '../api/crm';
-import { Building2, Plus, Search, Phone, Mail, ArrowUpRight, X, Check } from 'lucide-react';
+import { Building2, Plus, Search, Phone, Mail, ArrowUpRight, X, Check, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export function Clients() {
@@ -9,6 +9,8 @@ export function Clients() {
     const [loading, setLoading] = useState(true);
     const [query, setQuery] = useState('');
     const [drawerOpen, setDrawerOpen] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [formData, setFormData] = useState<Partial<ClientDto>>({
         razonSocial: '',
         cuitRut: '',
@@ -17,8 +19,8 @@ export function Clients() {
         telefonoGeneral: '',
         emailComercial: '',
         notas: '',
+        activo: true
     });
-    const [saving, setSaving] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -40,6 +42,7 @@ export function Clients() {
     const handleCreateClient = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!formData.razonSocial) return;
+        setErrorMsg(null);
 
         try {
             setSaving(true);
@@ -53,10 +56,12 @@ export function Clients() {
                 telefonoGeneral: '',
                 emailComercial: '',
                 notas: '',
+                activo: true
             });
             fetchClients();
-        } catch (e) {
+        } catch (e: any) {
             console.error('Error creating client:', e);
+            setErrorMsg(e.response?.data?.message || e.message || 'Error al guardar el cliente');
         } finally {
             setSaving(false);
         }
@@ -280,6 +285,13 @@ export function Clients() {
                                         className="w-full text-xs p-2 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-900 dark:text-slate-100 outline-none focus:border-amber-500"
                                     />
                                 </div>
+
+                                {errorMsg && (
+                                    <div className="p-3 bg-rose-500/10 border border-rose-500/30 text-rose-500 text-xs flex items-center gap-2">
+                                        <AlertCircle className="w-4 h-4 shrink-0" />
+                                        <span>{errorMsg}</span>
+                                    </div>
+                                )}
 
                                 <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-300 dark:border-[#333639]">
                                     <button

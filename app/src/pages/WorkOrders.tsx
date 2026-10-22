@@ -92,7 +92,15 @@ export function WorkOrders() {
                     </p>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
+                    <button
+                        onClick={() => navigate('/planner')}
+                        className="flex items-center gap-1.5 px-3 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-[#141517] dark:hover:bg-[#25282c] text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-[#333639] rounded-none font-heading font-bold text-xs uppercase tracking-wider transition-colors"
+                    >
+                        <Calendar className="w-3.5 h-3.5 text-amber-500" />
+                        <span>Planificador Semanal</span>
+                    </button>
+
                     <div className="flex items-center bg-slate-200 dark:bg-[#141517] p-0.5 rounded-none border border-slate-300 dark:border-[#333639] text-xs">
                         <button
                             onClick={() => setViewMode('KANBAN')}

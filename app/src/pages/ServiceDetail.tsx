@@ -3,8 +3,9 @@ import { crmApi } from '../api/crm';
 import type { ServiceDto, EquipmentDto } from '../api/crm';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
-    ArrowLeft, Plus, HardHat, Calendar, Clock, Wrench, FileText, Check, AlertTriangle, X
+    ArrowLeft, Plus, HardHat, Calendar, Clock, Wrench, FileText, Check, AlertTriangle, X, AlertCircle, RefreshCw
 } from 'lucide-react';
+import { EquipmentSpecsBuilder } from '../components/EquipmentSpecsBuilder';
 
 export function ServiceDetail() {
     const { id } = useParams<{ id: string }>();
@@ -12,16 +13,23 @@ export function ServiceDetail() {
     const [equipments, setEquipments] = useState<EquipmentDto[]>([]);
     const [loading, setLoading] = useState(true);
     const [showNewEqModal, setShowNewEqModal] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
     const [eqForm, setEqForm] = useState<Partial<EquipmentDto>>({
         nombre: '',
         marca: '',
         modelo: '',
         numeroSerie: '',
         ubicacion: '',
+        periodicidadRegular: 'MENSUAL',
+        intervaloHorasRegular: 250,
+        periodicidadServiceMayor: 'ANUAL',
+        intervaloHorasService: 1000,
         horometroActual: 0,
         specs: {}
     });
-    const [specsJson, setSpecsJson] = useState('{\n  "potencia_kva": 150,\n  "tension_salida": "380V/220V",\n  "combustible": "Diesel"\n}');
+    const [specsData, setSpecsData] = useState<Record<string, any>>({});
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -49,26 +57,35 @@ export function ServiceDetail() {
     const handleCreateEquipment = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!service || !eqForm.nombre) return;
-
-        let parsedSpecs = {};
-        try {
-            parsedSpecs = JSON.parse(specsJson);
-        } catch (e) {
-            alert('El formato JSON de especificaciones técnicas no es válido.');
-            return;
-        }
+        setErrorMsg(null);
 
         try {
+            setSaving(true);
             await crmApi.createEquipment({
                 ...eqForm,
                 serviceId: service.id!,
-                specs: parsedSpecs
+                specs: specsData
             } as EquipmentDto);
             setShowNewEqModal(false);
-            setEqForm({ nombre: '', marca: '', modelo: '', numeroSerie: '', ubicacion: '', horometroActual: 0 });
+            setEqForm({
+                nombre: '',
+                marca: '',
+                modelo: '',
+                numeroSerie: '',
+                ubicacion: '',
+                periodicidadRegular: 'MENSUAL',
+                intervaloHorasRegular: 250,
+                periodicidadServiceMayor: 'ANUAL',
+                intervaloHorasService: 1000,
+                horometroActual: 0
+            });
+            setSpecsData({});
             loadData(service.id!);
-        } catch (e) {
+        } catch (e: any) {
             console.error('Error creating equipment:', e);
+            setErrorMsg(e.response?.data?.message || e.message || 'Error al guardar el equipo');
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -174,7 +191,22 @@ export function ServiceDetail() {
                                 </div>
                             )}
 
+                            {/* Periodicidades y Horómetro */}
                             <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-slate-200 dark:border-[#333639]">
+                                <div>
+                                    <span className="text-[10px] font-mono uppercase font-bold text-slate-400 block">Preventivo Regular:</span>
+                                    <span className="font-mono font-bold text-amber-500">
+                                        {eq.periodicidadRegular || 'MENSUAL'}
+                                        {eq.intervaloHorasRegular ? ` (${eq.intervaloHorasRegular} hs)` : ''}
+                                    </span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] font-mono uppercase font-bold text-slate-400 block">Service Mayor:</span>
+                                    <span className="font-mono font-bold text-slate-700 dark:text-slate-200">
+                                        {eq.periodicidadServiceMayor || 'ANUAL'}
+                                        {eq.intervaloHorasService ? ` (${eq.intervaloHorasService} hs)` : ''}
+                                    </span>
+                                </div>
                                 <div>
                                     <span className="text-[10px] font-mono uppercase font-bold text-slate-400 block">Horómetro:</span>
                                     <span className="font-mono font-bold text-slate-700 dark:text-slate-200">{eq.horometroActual || 0} hs</span>
@@ -219,7 +251,8 @@ export function ServiceDetail() {
                                 />
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3">
+                            {/* Marca, Modelo y Serie */}
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                 <div>
                                     <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">Marca</label>
                                     <input
@@ -240,11 +273,8 @@ export function ServiceDetail() {
                                         className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500"
                                     />
                                 </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">Número de Serie</label>
+                                    <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">N° de Serie</label>
                                     <input
                                         type="text"
                                         placeholder="SN-99882211"
@@ -253,29 +283,105 @@ export function ServiceDetail() {
                                         className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500"
                                     />
                                 </div>
+                            </div>
+
+                            {/* Periodicidades de Mantenimiento del Equipo */}
+                            <div className="p-3 bg-slate-50 dark:bg-[#141517] border border-slate-300 dark:border-[#333639] space-y-3 rounded-none">
+                                <span className="text-[10px] font-mono font-bold uppercase text-amber-500 tracking-wider block">
+                                    Periodicidad de Mantenimiento del Equipo
+                                </span>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
+                                            Preventivo Regular (Rutina)
+                                        </label>
+                                        <select
+                                            value={eqForm.periodicidadRegular || 'MENSUAL'}
+                                            onChange={(e) => setEqForm({ ...eqForm, periodicidadRegular: e.target.value })}
+                                            className="w-full text-xs p-2 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#1e2022] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500 font-mono"
+                                        >
+                                            <option value="SEMANAL">Semanal</option>
+                                            <option value="QUINCENAL">Quincenal</option>
+                                            <option value="MENSUAL">Mensual</option>
+                                            <option value="BIMESTRAL">Bimestral</option>
+                                            <option value="TRIMESTRAL">Trimestral</option>
+                                            <option value="SEMESTRAL">Semestral</option>
+                                            <option value="ANUAL">Anual</option>
+                                            <option value="HORAS">Por Horas de Marcha</option>
+                                            <option value="A_DEMANDA">A Demanda</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
+                                            Intervalo Horas (Regular)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            placeholder="250 hs"
+                                            value={eqForm.intervaloHorasRegular || ''}
+                                            onChange={(e) => setEqForm({ ...eqForm, intervaloHorasRegular: parseInt(e.target.value) || undefined })}
+                                            className="w-full text-xs p-2 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#1e2022] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500 font-mono"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
+                                            Service Mayor / Overhaul
+                                        </label>
+                                        <select
+                                            value={eqForm.periodicidadServiceMayor || 'ANUAL'}
+                                            onChange={(e) => setEqForm({ ...eqForm, periodicidadServiceMayor: e.target.value })}
+                                            className="w-full text-xs p-2 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#1e2022] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500 font-mono"
+                                        >
+                                            <option value="ANUAL">Anual</option>
+                                            <option value="BIANUAL">Bianual (2 Años)</option>
+                                            <option value="HORAS">Por Horas (1000/1500 hs)</option>
+                                            <option value="NINGUNA">No Aplica</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
+                                            Intervalo Horas (Mayor)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            placeholder="1000 hs"
+                                            value={eqForm.intervaloHorasService || ''}
+                                            onChange={(e) => setEqForm({ ...eqForm, intervaloHorasService: parseInt(e.target.value) || undefined })}
+                                            className="w-full text-xs p-2 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#1e2022] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500 font-mono"
+                                        />
+                                    </div>
+                                </div>
+
                                 <div>
-                                    <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">Horómetro Inicial (hs)</label>
+                                    <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
+                                        Horómetro Inicial (Opcional - hs)
+                                    </label>
                                     <input
                                         type="number"
                                         step="0.1"
-                                        value={eqForm.horometroActual}
-                                        onChange={(e) => setEqForm({ ...eqForm, horometroActual: parseFloat(e.target.value) })}
-                                        className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500 font-mono"
+                                        placeholder="0.0"
+                                        value={eqForm.horometroActual ?? 0}
+                                        onChange={(e) => setEqForm({ ...eqForm, horometroActual: parseFloat(e.target.value) || 0 })}
+                                        className="w-full text-xs p-2 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#1e2022] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500 font-mono"
                                     />
                                 </div>
                             </div>
 
-                            <div>
-                                <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
-                                    Ficha Técnica Flexible (JSONB):
-                                </label>
-                                <textarea
-                                    rows={4}
-                                    value={specsJson}
-                                    onChange={(e) => setSpecsJson(e.target.value)}
-                                    className="w-full font-mono text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500"
-                                />
-                            </div>
+                            {/* Dynamic Specs Builder Component */}
+                            <EquipmentSpecsBuilder
+                                value={specsData}
+                                onChange={(specs) => setSpecsData(specs)}
+                            />
+
+                            {errorMsg && (
+                                <div className="p-3 bg-rose-500/10 border border-rose-500/30 text-rose-500 text-xs flex items-center gap-2">
+                                    <AlertCircle className="w-4 h-4 shrink-0" />
+                                    <span>{errorMsg}</span>
+                                </div>
+                            )}
 
                             <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-200 dark:border-[#333639]">
                                 <button

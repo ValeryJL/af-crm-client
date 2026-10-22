@@ -12,6 +12,7 @@ import { ServiceDetail } from './pages/ServiceDetail.tsx'
 import { Equipments } from './pages/Equipments.tsx'
 import { EquipmentDetail } from './pages/EquipmentDetail.tsx'
 import { WorkOrders } from './pages/WorkOrders.tsx'
+import { WeeklyPlanner } from './pages/WeeklyPlanner.tsx'
 import { WorkOrderReport } from './pages/WorkOrderReport.tsx'
 import { Login } from './pages/Login.tsx'
 import { Setup } from './pages/Setup.tsx'
@@ -106,6 +107,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="equipments" element={<Equipments />} />
               <Route path="equipments/:id" element={<EquipmentDetail />} />
               <Route path="work-orders" element={<WorkOrders />} />
+              <Route path="planner" element={<WeeklyPlanner />} />
               <Route path="work-orders/:id/report" element={<WorkOrderReport />} />
               <Route path="users" element={<Users />} />
               <Route path="settings" element={<Settings />} />
