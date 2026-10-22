@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { crmApi } from '../api/crm';
 import type { ClientDto } from '../api/crm';
-import { Building2, Plus, Search, MapPin, Phone, Mail, ArrowUpRight, X, Check } from 'lucide-react';
+import { Building2, Plus, Search, Phone, Mail, ArrowUpRight, X, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export function Clients() {
@@ -70,95 +70,90 @@ export function Clients() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">
-                        Gestión de Clientes (Visión 360°)
+                    <h1 className="text-xl sm:text-2xl font-heading font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">
+                        Cartera de Clientes (Visión 360°)
                     </h1>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                        Empresas, contratos de servicio asociados y sus respectivos equipos instalados.
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                        Empresas industriales, plantas productivas y contratos de mantenimiento asignados.
                     </p>
                 </div>
                 <button
                     onClick={() => setDrawerOpen(true)}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm shadow-md shadow-indigo-600/20 active:scale-95 transition-all self-start sm:self-auto"
+                    className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-bold text-xs shadow-xs transition-all self-start sm:self-auto"
                 >
-                    <Plus className="w-4 h-4" />
+                    <Plus className="w-3.5 h-3.5 text-sky-400" />
                     <span>Nuevo Cliente</span>
                 </button>
             </div>
 
             {/* Filter Bar */}
-            <div className="flex items-center gap-3 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 p-3 rounded-2xl">
+            <div className="flex items-center gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3.5 py-2.5 rounded-xl shadow-2xs">
                 <Search className="w-4 h-4 text-slate-400" />
                 <input
                     type="text"
-                    placeholder="Buscar por Razón Social o CUIT/RUT..."
+                    placeholder="Filtrar por Razón Social o CUIT/RUT..."
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    className="w-full bg-transparent text-sm text-slate-800 dark:text-slate-100 outline-none placeholder:text-slate-400"
+                    className="w-full bg-transparent text-xs text-slate-800 dark:text-slate-100 outline-none placeholder:text-slate-400"
                 />
             </div>
 
             {/* Table */}
-            <div className="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl overflow-hidden shadow-sm">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-xs">
                 {loading ? (
-                    <div className="py-16 text-center text-sm text-slate-400">Cargando cartera de clientes...</div>
+                    <div className="py-12 text-center text-xs text-slate-400">Cargando empresas clientes...</div>
                 ) : filtered.length === 0 ? (
-                    <div className="py-16 text-center">
-                        <Building2 className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                        <h3 className="text-base font-bold text-slate-700 dark:text-slate-200">No hay clientes registrados</h3>
-                        <p className="text-xs text-slate-400 mt-1">Empieza dando de alta una empresa para gestionar sus servicios y equipos.</p>
+                    <div className="py-12 text-center">
+                        <Building2 className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+                        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">No hay clientes registrados</h3>
+                        <p className="text-xs text-slate-400 mt-0.5">Comienza creando una empresa para vincular servicios y equipos.</p>
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-slate-50 dark:bg-slate-900/40 text-slate-400 uppercase text-[11px] font-bold border-b border-slate-100 dark:border-slate-700/50">
+                        <table className="w-full text-left text-xs">
+                            <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 uppercase text-[10px] font-bold border-b border-slate-200 dark:border-slate-800">
                                 <tr>
-                                    <th className="px-6 py-4">Razón Social / CUIT</th>
-                                    <th className="px-6 py-4">Contacto / Fiscal</th>
-                                    <th className="px-6 py-4">Servicios</th>
-                                    <th className="px-6 py-4">Equipos</th>
-                                    <th className="px-6 py-4 text-right">Acción</th>
+                                    <th className="px-5 py-3">Razón Social / CUIT</th>
+                                    <th className="px-5 py-3">Fiscal / Contacto</th>
+                                    <th className="px-5 py-3">Sedes</th>
+                                    <th className="px-5 py-3">Equipos</th>
+                                    <th className="px-5 py-3 text-right">Acción</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                 {filtered.map((client) => (
                                     <tr 
                                         key={client.id}
                                         onClick={() => navigate(`/clients/${client.id}`)}
-                                        className="hover:bg-slate-50/60 dark:hover:bg-slate-700/20 cursor-pointer transition-colors"
+                                        className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 cursor-pointer transition-colors"
                                     >
-                                        <td className="px-6 py-4">
-                                            <div className="font-bold text-slate-800 dark:text-slate-100">{client.razonSocial}</div>
-                                            <div className="text-xs text-slate-400 font-mono mt-0.5">{client.cuitRut || 'Sin CUIT'}</div>
+                                        <td className="px-5 py-3.5">
+                                            <div className="font-bold text-slate-900 dark:text-slate-100 text-sm">{client.razonSocial}</div>
+                                            <div className="text-[11px] text-slate-400 font-mono mt-0.5">{client.cuitRut || 'Sin CUIT'}</div>
                                         </td>
-                                        <td className="px-6 py-4 text-xs text-slate-500 space-y-0.5">
+                                        <td className="px-5 py-3.5 space-y-0.5">
+                                            <div className="font-semibold text-slate-700 dark:text-slate-300">{client.condicionFiscal || 'N/A'}</div>
                                             {client.telefonoGeneral && (
-                                                <div className="flex items-center gap-1.5">
+                                                <div className="flex items-center gap-1.5 text-slate-500">
                                                     <Phone className="w-3 h-3 text-slate-400" />
                                                     <span>{client.telefonoGeneral}</span>
                                                 </div>
                                             )}
-                                            {client.emailComercial && (
-                                                <div className="flex items-center gap-1.5">
-                                                    <Mail className="w-3 h-3 text-slate-400" />
-                                                    <span>{client.emailComercial}</span>
-                                                </div>
-                                            )}
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <span className="px-2.5 py-1 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-bold rounded-lg text-xs">
-                                                {client.totalServicios || 0} servicios
+                                        <td className="px-5 py-3.5">
+                                            <span className="px-2.5 py-1 bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 font-bold rounded text-xs border border-sky-100 dark:border-sky-900/40">
+                                                {client.totalServicios || 0} sedes
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300 font-bold rounded-lg text-xs">
+                                        <td className="px-5 py-3.5">
+                                            <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded text-xs">
                                                 {client.totalEquipos || 0} equipos
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <button className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400">
+                                        <td className="px-5 py-3.5 text-right">
+                                            <button className="p-1.5 text-slate-400 hover:text-sky-600 dark:hover:text-sky-400">
                                                 <ArrowUpRight className="w-4 h-4" />
                                             </button>
                                         </td>
@@ -174,24 +169,24 @@ export function Clients() {
             {drawerOpen && (
                 <div className="fixed inset-0 z-50 overflow-hidden animate-fade-in">
                     <div 
-                        className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
+                        className="absolute inset-0 bg-slate-900/50 backdrop-blur-2xs"
                         onClick={() => setDrawerOpen(false)}
                     />
                     <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
-                        <div className="w-screen max-w-md bg-white dark:bg-slate-800 shadow-2xl flex flex-col">
-                            <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+                        <div className="w-screen max-w-md bg-white dark:bg-slate-900 shadow-2xl flex flex-col border-l border-slate-200 dark:border-slate-800">
+                            <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                    <Building2 className="w-5 h-5 text-indigo-600" />
-                                    <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Nuevo Cliente</h2>
+                                    <Building2 className="w-5 h-5 text-sky-600 dark:text-sky-400" />
+                                    <h2 className="text-base font-heading font-bold text-slate-900 dark:text-slate-100">Nuevo Cliente B2B</h2>
                                 </div>
-                                <button onClick={() => setDrawerOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 rounded-lg">
-                                    <X className="w-5 h-5" />
+                                <button onClick={() => setDrawerOpen(false)} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg">
+                                    <X className="w-4 h-4" />
                                 </button>
                             </div>
 
-                            <form onSubmit={handleCreateClient} className="p-6 space-y-4 flex-1 overflow-y-auto">
+                            <form onSubmit={handleCreateClient} className="p-5 space-y-4 flex-1 overflow-y-auto">
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">
+                                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                                         Razón Social *
                                     </label>
                                     <input
@@ -200,13 +195,13 @@ export function Clients() {
                                         placeholder="Ej: Cervecería Quilmes S.A."
                                         value={formData.razonSocial}
                                         onChange={(e) => setFormData({ ...formData, razonSocial: e.target.value })}
-                                        className="w-full text-xs p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-indigo-500"
+                                        className="w-full text-xs p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-sky-500"
                                     />
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">
+                                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                                             CUIT / RUT
                                         </label>
                                         <input
@@ -214,17 +209,17 @@ export function Clients() {
                                             placeholder="30-12345678-9"
                                             value={formData.cuitRut}
                                             onChange={(e) => setFormData({ ...formData, cuitRut: e.target.value })}
-                                            className="w-full text-xs p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-indigo-500"
+                                            className="w-full text-xs p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-sky-500"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">
+                                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                                             Condición Fiscal
                                         </label>
                                         <select
                                             value={formData.condicionFiscal}
                                             onChange={(e) => setFormData({ ...formData, condicionFiscal: e.target.value })}
-                                            className="w-full text-xs p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-indigo-500"
+                                            className="w-full text-xs p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-sky-500"
                                         >
                                             <option value="Responsable Inscripto">Resp. Inscripto</option>
                                             <option value="Monotributo">Monotributo</option>
@@ -234,7 +229,7 @@ export function Clients() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">
+                                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                                         Dirección Fiscal
                                     </label>
                                     <input
@@ -242,13 +237,13 @@ export function Clients() {
                                         placeholder="Av. 12 de Octubre 100, Quilmes"
                                         value={formData.direccionFiscal}
                                         onChange={(e) => setFormData({ ...formData, direccionFiscal: e.target.value })}
-                                        className="w-full text-xs p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-indigo-500"
+                                        className="w-full text-xs p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-sky-500"
                                     />
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">
+                                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                                             Teléfono
                                         </label>
                                         <input
@@ -256,11 +251,11 @@ export function Clients() {
                                             placeholder="+54 11 4444-5555"
                                             value={formData.telefonoGeneral}
                                             onChange={(e) => setFormData({ ...formData, telefonoGeneral: e.target.value })}
-                                            className="w-full text-xs p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-indigo-500"
+                                            className="w-full text-xs p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-sky-500"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">
+                                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                                             Email Comercial
                                         </label>
                                         <input
@@ -268,38 +263,38 @@ export function Clients() {
                                             placeholder="contacto@empresa.com"
                                             value={formData.emailComercial}
                                             onChange={(e) => setFormData({ ...formData, emailComercial: e.target.value })}
-                                            className="w-full text-xs p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-indigo-500"
+                                            className="w-full text-xs p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-sky-500"
                                         />
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">
-                                        Notas Internas
+                                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                        Observaciones de Acceso / Requisitos
                                     </label>
                                     <textarea
                                         rows={3}
-                                        placeholder="Acceso por guardia lateral, requerir EPP..."
+                                        placeholder="Ingreso con seguro de vida y EPP obligatorio..."
                                         value={formData.notas}
                                         onChange={(e) => setFormData({ ...formData, notas: e.target.value })}
-                                        className="w-full text-xs p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-indigo-500"
+                                        className="w-full text-xs p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-sky-500"
                                     />
                                 </div>
 
-                                <div className="pt-4 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-slate-700">
+                                <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-200 dark:border-slate-800">
                                     <button
                                         type="button"
                                         onClick={() => setDrawerOpen(false)}
-                                        className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl"
+                                        className="px-3.5 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
                                     >
                                         Cancelar
                                     </button>
                                     <button
                                         type="submit"
                                         disabled={saving}
-                                        className="flex items-center gap-2 px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md shadow-indigo-600/20 active:scale-95 transition-all"
+                                        className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-lg shadow-xs"
                                     >
-                                        <Check className="w-4 h-4" />
+                                        <Check className="w-3.5 h-3.5" />
                                         <span>{saving ? 'Guardando...' : 'Crear Cliente'}</span>
                                     </button>
                                 </div>
