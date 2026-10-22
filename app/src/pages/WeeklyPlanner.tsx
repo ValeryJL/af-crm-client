@@ -4,7 +4,8 @@ import type { WorkOrderDto, ServiceDto, EquipmentDto } from '../api/crm';
 import { 
     Calendar, ChevronLeft, ChevronRight, Plus, Clock, User, 
     Wrench, AlertTriangle, CheckCircle2, MoreVertical, X, 
-    ArrowRight, Sparkles, Filter, HardHat, FileText, Check, AlertCircle, RefreshCw
+    ArrowRight, Sparkles, Filter, HardHat, FileText, Check, AlertCircle, RefreshCw,
+    Play, Eye, ExternalLink, Move
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -38,6 +39,13 @@ export function WeeklyPlanner() {
 
     // Left Pool Tab: 'PENDING' | 'SUGGESTIONS'
     const [poolTab, setPoolTab] = useState<'PENDING' | 'SUGGESTIONS'>('PENDING');
+
+    // Drag and Drop active states
+    const [dragOverDay, setDragOverDay] = useState<string | null>(null);
+    const [dragOverPool, setDragOverPool] = useState<boolean>(false);
+
+    // Selected order for detailed modal / slide-over
+    const [selectedOrder, setSelectedOrder] = useState<WorkOrderDto | null>(null);
 
     // Modals
     const [assignModal, setAssignModal] = useState<{
@@ -95,7 +103,6 @@ export function WeeklyPlanner() {
     const getWeekDays = (base: Date) => {
         const d = new Date(base);
         const day = d.getDay();
-        // Day 0 is Sunday, adjust so Monday is first day (diff = 1 - day, if Sunday diff = -6)
         const diff = d.getDate() - day + (day === 0 ? -6 : 1);
         const monday = new Date(d.setDate(diff));
 
@@ -146,7 +153,6 @@ export function WeeklyPlanner() {
     const generateSuggestions = (): SuggestionItem[] => {
         const suggestions: SuggestionItem[] = [];
 
-        // 1. From Equipments
         for (const eq of equipments) {
             if (eq.periodicidadRegular && eq.periodicidadRegular !== 'NINGUNA' && eq.periodicidadRegular !== 'A_DEMANDA') {
                 suggestions.push({
@@ -176,10 +182,8 @@ export function WeeklyPlanner() {
             }
         }
 
-        // 2. From Services with Overdue or Upcoming SLA
         for (const s of services) {
             if (s.slaStatus === 'OVERDUE' || s.slaStatus === 'UPCOMING') {
-                // Check if already suggested
                 if (!suggestions.some(sug => sug.serviceId === s.id)) {
                     suggestions.push({
                         id: `srv-${s.id}`,
@@ -199,6 +203,19 @@ export function WeeklyPlanner() {
 
     const suggestions = generateSuggestions();
 
+    // Quick Status Update
+    const handleStatusTransition = async (orderId: number, newStatus: string) => {
+        try {
+            await crmApi.updateWorkOrderStatus(orderId, newStatus);
+            if (selectedOrder && selectedOrder.id === orderId) {
+                setSelectedOrder(prev => prev ? { ...prev, estado: newStatus as any } : null);
+            }
+            loadData();
+        } catch (e) {
+            console.error('Error transitioning order status:', e);
+        }
+    };
+
     // Confirm Schedule / Create from Modal
     const handleConfirmAssign = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -213,14 +230,12 @@ export function WeeklyPlanner() {
             const targetDateTime = `${assignModal.targetDate}T09:00:00`;
 
             if (assignModal.order) {
-                // Update schedule of existing order
                 await crmApi.scheduleWorkOrder(
                     assignModal.order.id!,
                     targetDateTime,
                     assignModal.tecnicoId
                 );
             } else if (assignModal.suggestion) {
-                // Create new work order from suggestion
                 const sug = assignModal.suggestion;
                 await crmApi.createWorkOrder({
                     serviceId: sug.serviceId,
@@ -242,7 +257,7 @@ export function WeeklyPlanner() {
         }
     };
 
-    // Quick create work order (with or without date)
+    // Quick create work order
     const handleQuickCreateOrder = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!quickOrderForm.serviceId || !quickOrderForm.descripcion) return;
@@ -283,9 +298,62 @@ export function WeeklyPlanner() {
                 fechaProgramada: undefined,
                 estado: 'PENDIENTE'
             });
+            if (selectedOrder && selectedOrder.id === orderId) {
+                setSelectedOrder(null);
+            }
             loadData();
         } catch (e) {
             console.error('Error unscheduling order:', e);
+        }
+    };
+
+    // Native Drag and Drop Handlers
+    const handleDragStart = (e: React.DragEvent, itemType: 'ORDER' | 'SUGGESTION', data: any) => {
+        e.dataTransfer.setData('text/plain', JSON.stringify({ itemType, data }));
+        e.dataTransfer.effectAllowed = 'move';
+    };
+
+    const handleDropOnDay = async (targetDayIso: string, e: React.DragEvent) => {
+        e.preventDefault();
+        setDragOverDay(null);
+        try {
+            const raw = e.dataTransfer.getData('text/plain');
+            if (!raw) return;
+            const payload = JSON.parse(raw);
+            const targetDateTime = `${targetDayIso}T09:00:00`;
+
+            if (payload.itemType === 'ORDER') {
+                const orderId = payload.data.id;
+                await crmApi.scheduleWorkOrder(orderId, targetDateTime);
+                loadData();
+            } else if (payload.itemType === 'SUGGESTION') {
+                const sug: SuggestionItem = payload.data;
+                await crmApi.createWorkOrder({
+                    serviceId: sug.serviceId,
+                    tipo: sug.tipo,
+                    estado: 'PENDIENTE',
+                    fechaProgramada: targetDateTime,
+                    descripcion: `[Generado Automáticamente] ${sug.motivo}${sug.equipmentNombre ? ` — Equipo: ${sug.equipmentNombre}` : ''}`
+                } as WorkOrderDto);
+                loadData();
+            }
+        } catch (err) {
+            console.error('Error handling drop on day:', err);
+        }
+    };
+
+    const handleDropOnPool = async (e: React.DragEvent) => {
+        e.preventDefault();
+        setDragOverPool(false);
+        try {
+            const raw = e.dataTransfer.getData('text/plain');
+            if (!raw) return;
+            const payload = JSON.parse(raw);
+            if (payload.itemType === 'ORDER' && payload.data.id) {
+                await handleUnschedule(payload.data.id);
+            }
+        } catch (err) {
+            console.error('Error handling drop on pool:', err);
         }
     };
 
@@ -301,7 +369,7 @@ export function WeeklyPlanner() {
                         </h1>
                     </div>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 pl-4.5">
-                        Asignación ágil de técnicos por día, bandeja de pendientes y generación automática de preventivos.
+                        Arrastra y suelta órdenes entre días, cambia estados en 1 clic y visualiza detalles técnicos.
                     </p>
                 </div>
 
@@ -350,12 +418,20 @@ export function WeeklyPlanner() {
             {/* Layout Principal: Drawer Lateral de Pendientes + Grid Semanal */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
                 {/* Lateral: Bandeja de Pendientes y Sugerencias (3 columnas en desktop) */}
-                <div className="lg:col-span-3 bg-white dark:bg-[#1e2022] border border-slate-300 dark:border-[#333639] rounded-none shadow-xs flex flex-col h-[750px]">
+                <div 
+                    onDragOver={(e) => { e.preventDefault(); setDragOverPool(true); }}
+                    onDragLeave={() => setDragOverPool(false)}
+                    onDrop={handleDropOnPool}
+                    className={`lg:col-span-3 bg-white dark:bg-[#1e2022] border rounded-none shadow-xs flex flex-col h-[750px] transition-all ${
+                        dragOverPool ? 'border-amber-500 bg-amber-500/5 ring-2 ring-amber-500/20' : 'border-slate-300 dark:border-[#333639]'
+                    }`}
+                >
                     {/* Header Bandeja */}
                     <div className="p-3 border-b border-slate-200 dark:border-[#333639]">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-[11px] font-mono font-bold uppercase text-slate-700 dark:text-slate-300 tracking-wider">
-                                Bandeja Operativa
+                            <span className="text-[11px] font-mono font-bold uppercase text-slate-700 dark:text-slate-300 tracking-wider flex items-center gap-1.5">
+                                <Move className="w-3 h-3 text-amber-500" />
+                                <span>Bandeja Operativa</span>
                             </span>
                             <button
                                 onClick={() => {
@@ -401,13 +477,16 @@ export function WeeklyPlanner() {
                                 <div className="py-12 text-center text-xs text-slate-400">
                                     <CheckCircle2 className="w-8 h-8 text-emerald-500/50 mx-auto mb-2" />
                                     <p className="font-bold">No hay OTs pendientes</p>
-                                    <p className="text-[11px] mt-1">Todas las órdenes están programadas.</p>
+                                    <p className="text-[11px] mt-1">Arrastra una orden aquí para desprogramarla.</p>
                                 </div>
                             ) : (
                                 unscheduledOrders.map((order) => (
                                     <div
                                         key={order.id}
-                                        className="p-3 bg-slate-50 dark:bg-[#141517] border border-slate-200 dark:border-[#333639] rounded-none hover:border-amber-500 transition-colors space-y-2"
+                                        draggable
+                                        onDragStart={(e) => handleDragStart(e, 'ORDER', order)}
+                                        onClick={() => setSelectedOrder(order)}
+                                        className="p-3 bg-slate-50 dark:bg-[#141517] border border-slate-200 dark:border-[#333639] rounded-none hover:border-amber-500 cursor-grab active:cursor-grabbing transition-colors space-y-2 shadow-2xs"
                                     >
                                         <div className="flex items-start justify-between gap-1">
                                             <span className="font-mono text-[11px] font-bold text-amber-500">
@@ -433,7 +512,8 @@ export function WeeklyPlanner() {
                                                 {order.tecnicoNombre || 'Sin técnico'}
                                             </span>
                                             <button
-                                                onClick={() => {
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
                                                     setErrorMsg(null);
                                                     setAssignModal({
                                                         open: true,
@@ -444,7 +524,7 @@ export function WeeklyPlanner() {
                                                 }}
                                                 className="flex items-center gap-1 px-2 py-1 bg-amber-600 hover:bg-amber-500 text-white font-heading font-bold text-[10px] uppercase rounded-none transition-colors"
                                             >
-                                                <span>Asignar Día</span>
+                                                <span>Asignar</span>
                                                 <ArrowRight className="w-3 h-3" />
                                             </button>
                                         </div>
@@ -460,7 +540,9 @@ export function WeeklyPlanner() {
                                 suggestions.map((sug) => (
                                     <div
                                         key={sug.id}
-                                        className="p-3 bg-slate-50 dark:bg-[#141517] border border-slate-200 dark:border-[#333639] rounded-none hover:border-amber-500 transition-colors space-y-2"
+                                        draggable
+                                        onDragStart={(e) => handleDragStart(e, 'SUGGESTION', sug)}
+                                        className="p-3 bg-slate-50 dark:bg-[#141517] border border-slate-200 dark:border-[#333639] rounded-none hover:border-amber-500 cursor-grab active:cursor-grabbing transition-colors space-y-2 shadow-2xs"
                                     >
                                         <div className="flex items-start justify-between gap-1">
                                             <span className="text-[9px] font-mono font-bold uppercase px-1.5 py-0.5 bg-amber-500/10 text-amber-500 border border-amber-500/30">
@@ -495,7 +577,7 @@ export function WeeklyPlanner() {
                                                 }}
                                                 className="flex items-center gap-1 px-2.5 py-1 bg-amber-600 hover:bg-amber-500 text-white font-heading font-bold text-[10px] uppercase rounded-none transition-colors"
                                             >
-                                                <span>+ Agendar a Día</span>
+                                                <span>+ Agendar</span>
                                                 <ArrowRight className="w-3 h-3" />
                                             </button>
                                         </div>
@@ -506,21 +588,27 @@ export function WeeklyPlanner() {
                     </div>
                 </div>
 
-                {/* Cuadrícula Semanal (9 columnas en desktop, 7 días) */}
+                {/* Cuadrícula Semanal (9 columnas en desktop, 7 días con drag & drop) */}
                 <div className="lg:col-span-9 bg-white dark:bg-[#1e2022] border border-slate-300 dark:border-[#333639] rounded-none shadow-xs overflow-x-auto h-[750px] flex flex-col">
-                    <div className="grid grid-cols-7 min-w-[900px] flex-1 divide-x divide-slate-200 dark:divide-[#333639]">
+                    <div className="grid grid-cols-7 min-w-[950px] flex-1 divide-x divide-slate-200 dark:divide-[#333639]">
                         {weekDays.map((day) => {
-                            // Find orders scheduled on this date
                             const dayOrders = workOrders.filter(wo => {
                                 if (!wo.fechaProgramada) return false;
                                 return wo.fechaProgramada.startsWith(day.iso);
                             });
 
+                            const isDropActive = dragOverDay === day.iso;
+
                             return (
                                 <div
                                     key={day.iso}
-                                    className={`flex flex-col h-full bg-white dark:bg-[#1e2022] ${
-                                        day.isToday ? 'bg-amber-500/5' : ''
+                                    onDragOver={(e) => { e.preventDefault(); setDragOverDay(day.iso); }}
+                                    onDragLeave={() => setDragOverDay(null)}
+                                    onDrop={(e) => handleDropOnDay(day.iso, e)}
+                                    className={`flex flex-col h-full transition-all ${
+                                        isDropActive 
+                                            ? 'bg-amber-500/15 ring-2 ring-inset ring-amber-500' 
+                                            : day.isToday ? 'bg-amber-500/5' : 'bg-white dark:bg-[#1e2022]'
                                     }`}
                                 >
                                     {/* Cabecera del Día */}
@@ -541,7 +629,7 @@ export function WeeklyPlanner() {
                                                 )}
                                             </div>
                                             <span className="text-[10px] font-mono text-slate-400">
-                                                {day.dayNumber} {day.monthName}
+                                                {day.dayNumber} {day.monthName} ({dayOrders.length})
                                             </span>
                                         </div>
                                         <button
@@ -560,7 +648,7 @@ export function WeeklyPlanner() {
                                     <div className="flex-1 p-2 space-y-2 overflow-y-auto">
                                         {dayOrders.length === 0 ? (
                                             <div className="h-24 flex items-center justify-center border border-dashed border-slate-200 dark:border-[#333639] text-[10px] font-mono text-slate-400 text-center p-2">
-                                                Sin servicios
+                                                Arrastra una OT aquí
                                             </div>
                                         ) : (
                                             dayOrders.map((order) => {
@@ -570,11 +658,14 @@ export function WeeklyPlanner() {
                                                 return (
                                                     <div
                                                         key={order.id}
-                                                        className={`p-2.5 rounded-none border transition-colors space-y-1.5 ${
+                                                        draggable
+                                                        onDragStart={(e) => handleDragStart(e, 'ORDER', order)}
+                                                        onClick={() => setSelectedOrder(order)}
+                                                        className={`p-2.5 rounded-none border cursor-pointer hover:shadow-md transition-all space-y-1.5 ${
                                                             isCompleted
                                                                 ? 'bg-emerald-500/5 border-emerald-500/30'
                                                                 : isInProgress
-                                                                    ? 'bg-amber-500/10 border-amber-500/40'
+                                                                    ? 'bg-amber-500/10 border-amber-500/50 ring-1 ring-amber-500/30'
                                                                     : 'bg-slate-50 dark:bg-[#141517] border-slate-200 dark:border-[#333639] hover:border-amber-500'
                                                         }`}
                                                     >
@@ -584,9 +675,9 @@ export function WeeklyPlanner() {
                                                             </span>
                                                             <span className={`text-[8px] font-mono font-bold uppercase px-1 py-0.2 ${
                                                                 isCompleted
-                                                                    ? 'bg-emerald-500/20 text-emerald-400'
+                                                                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                                                                     : isInProgress
-                                                                        ? 'bg-amber-500/20 text-amber-400'
+                                                                        ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
                                                                         : 'bg-slate-200 dark:bg-[#25282c] text-slate-600 dark:text-slate-300'
                                                             }`}>
                                                                 {order.estado}
@@ -606,27 +697,40 @@ export function WeeklyPlanner() {
                                                             {order.descripcion}
                                                         </p>
 
-                                                        {/* Técnico Asignado */}
+                                                        {/* Técnico y Botón Rápido de Estado */}
                                                         <div className="pt-1.5 border-t border-slate-200 dark:border-[#333639] flex items-center justify-between text-[10px]">
-                                                            <div className="flex items-center gap-1 text-slate-700 dark:text-slate-300 font-mono truncate">
+                                                            <div className="flex items-center gap-1 text-slate-700 dark:text-slate-300 font-mono truncate max-w-[100px]">
                                                                 <User className="w-3 h-3 text-amber-500 shrink-0" />
                                                                 <span className="truncate">{order.tecnicoNombre || 'Sin técnico'}</span>
                                                             </div>
+                                                            
                                                             <div className="flex items-center gap-1 shrink-0">
-                                                                <button
-                                                                    onClick={() => handleUnschedule(order.id!)}
-                                                                    className="p-1 text-slate-400 hover:text-rose-500"
-                                                                    title="Desprogramar (enviar a bandeja)"
-                                                                >
-                                                                    <X className="w-3 h-3" />
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => navigate(`/work-orders/${order.id}/report`)}
-                                                                    className="p-1 text-slate-400 hover:text-amber-500"
-                                                                    title="Ver / Llenar reporte"
-                                                                >
-                                                                    <FileText className="w-3 h-3" />
-                                                                </button>
+                                                                {order.estado !== 'COMPLETADA' && order.estado !== 'EN_CURSO' && (
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleStatusTransition(order.id!, 'EN_CURSO');
+                                                                        }}
+                                                                        className="flex items-center gap-0.5 px-1.5 py-0.5 bg-amber-600 hover:bg-amber-500 text-white font-heading font-bold text-[9px] uppercase transition-colors"
+                                                                        title="Iniciar OT (Poner en Curso)"
+                                                                    >
+                                                                        <Play className="w-2.5 h-2.5" />
+                                                                        <span>Iniciar</span>
+                                                                    </button>
+                                                                )}
+                                                                {order.estado === 'EN_CURSO' && (
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            navigate(`/work-orders/${order.id}/report`);
+                                                                        }}
+                                                                        className="flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-600 hover:bg-emerald-500 text-white font-heading font-bold text-[9px] uppercase transition-colors"
+                                                                        title="Cerrar Reporte"
+                                                                    >
+                                                                        <Check className="w-2.5 h-2.5" />
+                                                                        <span>Cerrar</span>
+                                                                    </button>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     </div>
@@ -640,6 +744,119 @@ export function WeeklyPlanner() {
                     </div>
                 </div>
             </div>
+
+            {/* Modal / Slide-Over: Detalle Completo de Orden de Trabajo */}
+            {selectedOrder && (
+                <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+                    <div className="bg-white dark:bg-[#1e2022] border border-slate-300 dark:border-[#333639] rounded-none max-w-lg w-full p-5 shadow-2xl space-y-4">
+                        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-[#333639]">
+                            <div className="flex items-center gap-2">
+                                <span className="font-mono text-sm font-black text-amber-500">
+                                    {selectedOrder.numeroOt}
+                                </span>
+                                <span className={`text-[10px] font-mono font-bold uppercase px-2 py-0.5 ${
+                                    selectedOrder.estado === 'COMPLETADA'
+                                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                        : selectedOrder.estado === 'EN_CURSO'
+                                            ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                                            : 'bg-slate-200 dark:bg-[#25282c] text-slate-700 dark:text-slate-300'
+                                }`}>
+                                    {selectedOrder.estado}
+                                </span>
+                            </div>
+                            <button onClick={() => setSelectedOrder(null)} className="text-slate-400 hover:text-white">
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        {/* Datos Sede & Cliente */}
+                        <div className="p-3 bg-slate-50 dark:bg-[#141517] border border-slate-200 dark:border-[#333639] space-y-2">
+                            <div>
+                                <span className="text-[10px] font-mono font-bold uppercase text-slate-400 block">Sede y Cliente</span>
+                                <h3 className="font-heading font-black text-slate-800 dark:text-slate-100 text-sm">
+                                    {selectedOrder.serviceNombre}
+                                </h3>
+                                <p className="text-xs text-amber-500 font-bold">{selectedOrder.clientRazonSocial}</p>
+                                <p className="text-[11px] text-slate-400 mt-0.5">{selectedOrder.direccionFisica || 'Sin dirección física especificada'}</p>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-200 dark:border-[#333639] text-xs">
+                                <div>
+                                    <span className="text-[10px] font-mono font-bold uppercase text-slate-400 block">Tipo de Trabajo</span>
+                                    <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{selectedOrder.tipo}</span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] font-mono font-bold uppercase text-slate-400 block">Fecha Programada</span>
+                                    <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
+                                        {selectedOrder.fechaProgramada ? selectedOrder.fechaProgramada.replace('T', ' ').slice(0, 16) : 'Sin agendar'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Descripción */}
+                        <div>
+                            <span className="text-[11px] font-mono font-bold uppercase text-slate-600 dark:text-slate-400 block mb-1">
+                                Tareas e Instrucciones Técnicas
+                            </span>
+                            <div className="p-3 bg-white dark:bg-[#141517] border border-slate-200 dark:border-[#333639] text-xs text-slate-800 dark:text-slate-200 whitespace-pre-wrap font-sans">
+                                {selectedOrder.descripcion || 'Sin descripción detallada.'}
+                            </div>
+                        </div>
+
+                        {/* Acciones de Estado & Navegación */}
+                        <div className="p-3 bg-slate-50 dark:bg-[#141517] border border-slate-200 dark:border-[#333639] space-y-2">
+                            <span className="text-[10px] font-mono font-bold uppercase text-amber-500 block">
+                                Control de Estado Operativo
+                            </span>
+                            <div className="flex flex-wrap gap-2">
+                                {selectedOrder.estado !== 'EN_CURSO' && selectedOrder.estado !== 'COMPLETADA' && (
+                                    <button
+                                        onClick={() => handleStatusTransition(selectedOrder.id!, 'EN_CURSO')}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white font-heading font-bold text-xs uppercase transition-colors"
+                                    >
+                                        <Play className="w-3.5 h-3.5" />
+                                        <span>Iniciar Visita (En Curso)</span>
+                                    </button>
+                                )}
+                                {selectedOrder.estado !== 'PENDIENTE' && selectedOrder.estado !== 'COMPLETADA' && (
+                                    <button
+                                        onClick={() => handleStatusTransition(selectedOrder.id!, 'PENDIENTE')}
+                                        className="px-3 py-1.5 bg-slate-200 dark:bg-[#25282c] hover:bg-slate-300 text-slate-700 dark:text-slate-200 font-heading font-bold text-xs uppercase transition-colors"
+                                    >
+                                        Volver a Pendiente
+                                    </button>
+                                )}
+                                {selectedOrder.fechaProgramada && (
+                                    <button
+                                        onClick={() => handleUnschedule(selectedOrder.id!)}
+                                        className="px-3 py-1.5 border border-rose-500/30 text-rose-500 hover:bg-rose-500/10 font-heading font-bold text-xs uppercase transition-colors"
+                                    >
+                                        Desprogramar a Bandeja
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Botones de Pie */}
+                        <div className="pt-2 flex items-center justify-between border-t border-slate-200 dark:border-[#333639]">
+                            <button
+                                onClick={() => setSelectedOrder(null)}
+                                className="px-3.5 py-1.5 text-xs font-bold text-slate-400 hover:text-white rounded-none transition-colors"
+                            >
+                                Cerrar
+                            </button>
+                            <button
+                                onClick={() => navigate(`/work-orders/${selectedOrder.id}/report`)}
+                                className="flex items-center gap-1.5 px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-heading font-bold text-xs uppercase tracking-wider transition-colors"
+                            >
+                                <FileText className="w-3.5 h-3.5" />
+                                <span>Abrir Reporte de Campo</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Modal: Asignar a Día & Técnico */}
             {assignModal.open && (
