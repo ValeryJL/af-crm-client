@@ -812,15 +812,6 @@ export function WeeklyPlanner() {
                                 Control de Estado Operativo
                             </span>
                             <div className="flex flex-wrap gap-2">
-                                {selectedOrder.estado !== 'ASIGNADA' && selectedOrder.estado !== 'COMPLETADA' && (
-                                    <button
-                                        onClick={() => handleStatusTransition(selectedOrder.id!, 'ASIGNADA')}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/20 text-amber-500 hover:bg-amber-500/30 border border-amber-500/40 font-heading font-bold text-xs uppercase transition-colors"
-                                    >
-                                        <CheckCircle2 className="w-3.5 h-3.5" />
-                                        <span>Marcar Asignada</span>
-                                    </button>
-                                )}
                                 {selectedOrder.estado !== 'EN_CURSO' && selectedOrder.estado !== 'COMPLETADA' && (
                                     <button
                                         onClick={() => handleStatusTransition(selectedOrder.id!, 'EN_CURSO')}
