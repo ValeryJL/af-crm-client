@@ -147,7 +147,7 @@ export function WeeklyPlanner() {
     };
 
     // Work Orders unassigned or without scheduled date
-    const unscheduledOrders = workOrders.filter(wo => !wo.fechaProgramada || wo.estado === 'PENDIENTE');
+    const unscheduledOrders = workOrders.filter(wo => !wo.fechaProgramada);
 
     // Generate Automatic Maintenance Suggestions based on Equipments & Services
     const generateSuggestions = (): SuggestionItem[] => {
@@ -235,12 +235,13 @@ export function WeeklyPlanner() {
                     targetDateTime,
                     assignModal.tecnicoId
                 );
+                await crmApi.updateWorkOrderStatus(assignModal.order.id!, 'ASIGNADA');
             } else if (assignModal.suggestion) {
                 const sug = assignModal.suggestion;
                 await crmApi.createWorkOrder({
                     serviceId: sug.serviceId,
                     tipo: sug.tipo,
-                    estado: assignModal.tecnicoId ? 'ASIGNADA' : 'PENDIENTE',
+                    estado: 'ASIGNADA',
                     fechaProgramada: targetDateTime,
                     tecnicoId: assignModal.tecnicoId,
                     descripcion: `[Generado Automáticamente] ${sug.motivo}${sug.equipmentNombre ? ` — Equipo: ${sug.equipmentNombre}` : ''}`
@@ -269,7 +270,7 @@ export function WeeklyPlanner() {
             await crmApi.createWorkOrder({
                 serviceId: quickOrderForm.serviceId,
                 tipo: quickOrderForm.tipo,
-                estado: quickOrderForm.tecnicoId && fecha ? 'ASIGNADA' : 'PENDIENTE',
+                estado: fecha ? 'ASIGNADA' : 'PENDIENTE',
                 fechaProgramada: fecha,
                 tecnicoId: quickOrderForm.tecnicoId,
                 descripcion: quickOrderForm.descripcion
@@ -325,13 +326,14 @@ export function WeeklyPlanner() {
             if (payload.itemType === 'ORDER') {
                 const orderId = payload.data.id;
                 await crmApi.scheduleWorkOrder(orderId, targetDateTime);
+                await crmApi.updateWorkOrderStatus(orderId, 'ASIGNADA');
                 loadData();
             } else if (payload.itemType === 'SUGGESTION') {
                 const sug: SuggestionItem = payload.data;
                 await crmApi.createWorkOrder({
                     serviceId: sug.serviceId,
                     tipo: sug.tipo,
-                    estado: 'PENDIENTE',
+                    estado: 'ASIGNADA',
                     fechaProgramada: targetDateTime,
                     descripcion: `[Generado Automáticamente] ${sug.motivo}${sug.equipmentNombre ? ` — Equipo: ${sug.equipmentNombre}` : ''}`
                 } as WorkOrderDto);
@@ -810,6 +812,15 @@ export function WeeklyPlanner() {
                                 Control de Estado Operativo
                             </span>
                             <div className="flex flex-wrap gap-2">
+                                {selectedOrder.estado !== 'ASIGNADA' && selectedOrder.estado !== 'COMPLETADA' && (
+                                    <button
+                                        onClick={() => handleStatusTransition(selectedOrder.id!, 'ASIGNADA')}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/20 text-amber-500 hover:bg-amber-500/30 border border-amber-500/40 font-heading font-bold text-xs uppercase transition-colors"
+                                    >
+                                        <CheckCircle2 className="w-3.5 h-3.5" />
+                                        <span>Marcar Asignada</span>
+                                    </button>
+                                )}
                                 {selectedOrder.estado !== 'EN_CURSO' && selectedOrder.estado !== 'COMPLETADA' && (
                                     <button
                                         onClick={() => handleStatusTransition(selectedOrder.id!, 'EN_CURSO')}
