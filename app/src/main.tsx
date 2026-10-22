@@ -5,6 +5,14 @@ import './index.css'
 import { AuthProvider } from './context/AuthContext.tsx'
 import { MainLayout } from './layouts/MainLayout.tsx'
 import { Dashboard } from './pages/Dashboard.tsx'
+import { Clients } from './pages/Clients.tsx'
+import { ClientDetail } from './pages/ClientDetail.tsx'
+import { Services } from './pages/Services.tsx'
+import { ServiceDetail } from './pages/ServiceDetail.tsx'
+import { Equipments } from './pages/Equipments.tsx'
+import { EquipmentDetail } from './pages/EquipmentDetail.tsx'
+import { WorkOrders } from './pages/WorkOrders.tsx'
+import { WorkOrderReport } from './pages/WorkOrderReport.tsx'
 import { Login } from './pages/Login.tsx'
 import { Setup } from './pages/Setup.tsx'
 import { Technicians as Users } from './pages/Technicians.tsx'
@@ -91,8 +99,16 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/register" element={<RegisterInvited />} />
             <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
               <Route index element={<Dashboard />} />
-              <Route path="/users" element={<Users />} />
-              <Route path="/settings" element={<Settings />} />
+              <Route path="clients" element={<Clients />} />
+              <Route path="clients/:id" element={<ClientDetail />} />
+              <Route path="services" element={<Services />} />
+              <Route path="services/:id" element={<ServiceDetail />} />
+              <Route path="equipments" element={<Equipments />} />
+              <Route path="equipments/:id" element={<EquipmentDetail />} />
+              <Route path="work-orders" element={<WorkOrders />} />
+              <Route path="work-orders/:id/report" element={<WorkOrderReport />} />
+              <Route path="users" element={<Users />} />
+              <Route path="settings" element={<Settings />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>
