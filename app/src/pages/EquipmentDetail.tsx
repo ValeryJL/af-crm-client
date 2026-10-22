@@ -3,7 +3,7 @@ import { crmApi } from '../api/crm';
 import type { EquipmentDto, EquipmentPartDto } from '../api/crm';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
-    ArrowLeft, Plus, HardHat, Wrench, AlertTriangle, Check, Trash2, Calendar 
+    ArrowLeft, Plus, HardHat, Wrench, AlertTriangle, Check, Trash2, Calendar, X
 } from 'lucide-react';
 
 export function EquipmentDetail() {
@@ -60,131 +60,137 @@ export function EquipmentDetail() {
         }
     };
 
-    if (loading) return <div className="py-20 text-center text-sm text-slate-400">Cargando ficha técnica...</div>;
-    if (!equipment) return <div className="py-20 text-center text-slate-500">Equipo no encontrado</div>;
+    if (loading) return <div className="py-20 text-center text-xs font-mono text-slate-400 uppercase tracking-widest">Cargando ficha técnica...</div>;
+    if (!equipment) return <div className="py-20 text-center text-slate-400 text-xs">Equipo no encontrado</div>;
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center gap-3">
+        <div className="space-y-6 animate-fade-in">
+            {/* Header / Navegación */}
+            <div className="flex items-center gap-3 pb-4 border-b border-slate-300 dark:border-[#333639]">
                 <button 
                     onClick={() => navigate(`/services/${equipment.serviceId}`)} 
-                    className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800"
+                    className="p-2 text-slate-400 hover:text-white hover:bg-slate-200 dark:hover:bg-[#282a2d] rounded-none transition-colors"
+                    title="Volver a Sede"
                 >
                     <ArrowLeft className="w-5 h-5" />
                 </button>
-                <div>
-                    <h1 className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-slate-100">
-                        {equipment.nombre}
-                    </h1>
-                    <p className="text-xs text-slate-400 mt-0.5">
+                <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-6 bg-amber-500 inline-block"></span>
+                        <h1 className="text-xl sm:text-2xl font-heading font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">
+                            {equipment.nombre}
+                        </h1>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5 pl-4.5 font-mono">
                         {equipment.marca} {equipment.modelo} — Instalado en: {equipment.serviceNombre} ({equipment.clientRazonSocial})
                     </p>
                 </div>
             </div>
 
             {/* Quick Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-white dark:bg-slate-800/80 p-5 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm">
-                    <span className="text-[10px] font-bold uppercase text-slate-400 block">Horómetro Actual</span>
-                    <span className="text-3xl font-black text-slate-800 dark:text-slate-100 mt-1 block">
-                        {equipment.horometroActual || 0} <span className="text-sm font-semibold text-slate-400">hs</span>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="bg-white dark:bg-[#1e2022] p-4 rounded-none border border-slate-300 dark:border-[#333639] shadow-xs">
+                    <span className="text-[10px] font-mono font-bold uppercase text-slate-400 block tracking-wider">Horómetro Actual</span>
+                    <span className="text-2xl font-heading font-black text-slate-800 dark:text-slate-100 mt-1 block">
+                        {equipment.horometroActual || 0} <span className="text-xs font-mono font-normal text-slate-400">hs</span>
                     </span>
                 </div>
-                <div className="bg-white dark:bg-slate-800/80 p-5 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm">
-                    <span className="text-[10px] font-bold uppercase text-slate-400 block">Próximo Service Mayor</span>
-                    <span className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-1 block">
+                <div className="bg-white dark:bg-[#1e2022] p-4 rounded-none border border-slate-300 dark:border-[#333639] shadow-xs">
+                    <span className="text-[10px] font-mono font-bold uppercase text-slate-400 block tracking-wider">Próximo Service Mayor</span>
+                    <span className="text-xl font-heading font-bold text-slate-800 dark:text-slate-100 mt-1 block font-mono">
                         {equipment.fechaProximoServiceMayor || 'No definido'}
                     </span>
                 </div>
-                <div className="bg-white dark:bg-slate-800/80 p-5 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm">
-                    <span className="text-[10px] font-bold uppercase text-slate-400 block">Ubicación / N° Serie</span>
-                    <span className="text-base font-bold text-slate-800 dark:text-slate-100 mt-1 block truncate">
+                <div className="bg-white dark:bg-[#1e2022] p-4 rounded-none border border-slate-300 dark:border-[#333639] shadow-xs">
+                    <span className="text-[10px] font-mono font-bold uppercase text-slate-400 block tracking-wider">Ubicación / N° Serie</span>
+                    <span className="text-xs font-mono font-bold text-slate-800 dark:text-slate-100 mt-2 block truncate">
                         {equipment.ubicacion || 'N/A'} — S/N: {equipment.numeroSerie || 'N/A'}
                     </span>
                 </div>
             </div>
 
             {/* Specs JSON Viewer */}
-            <div className="bg-white dark:bg-slate-800/80 p-6 rounded-3xl border border-slate-200 dark:border-slate-700/60 shadow-sm space-y-4">
-                <h2 className="text-base font-bold text-slate-800 dark:text-slate-100">
-                    Ficha Técnica Flexible (Atributos Dinámicos)
+            <div className="bg-white dark:bg-[#1e2022] p-4 rounded-none border border-slate-300 dark:border-[#333639] shadow-xs space-y-3">
+                <h2 className="text-xs font-heading font-black text-slate-800 dark:text-slate-100 uppercase tracking-wider">
+                    Ficha Técnica Dinámica (JSONB)
                 </h2>
                 {equipment.specs && Object.keys(equipment.specs).length > 0 ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         {Object.entries(equipment.specs).map(([k, v]) => (
-                            <div key={k} className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
-                                <span className="text-[10px] uppercase font-bold text-slate-400 block">{k.replace('_', ' ')}</span>
-                                <span className="text-sm font-bold text-slate-800 dark:text-slate-100 mt-0.5 block">{String(v)}</span>
+                            <div key={k} className="p-2.5 bg-slate-50 dark:bg-[#141517] rounded-none border border-slate-200 dark:border-[#333639]">
+                                <span className="text-[10px] font-mono uppercase font-bold text-slate-400 block tracking-wider">{k.replace('_', ' ')}</span>
+                                <span className="text-xs font-mono font-bold text-slate-800 dark:text-slate-100 mt-0.5 block">{String(v)}</span>
                             </div>
                         ))}
                     </div>
                 ) : (
-                    <p className="text-xs text-slate-400">Sin especificaciones técnicas adicionales.</p>
+                    <p className="text-xs text-slate-400">Sin especificaciones técnicas adicionales registradas.</p>
                 )}
             </div>
 
             {/* Parts & Consumables Table */}
             <div className="space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-[#333639]">
                     <div>
-                        <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">
+                        <h2 className="text-sm font-heading font-black text-slate-800 dark:text-slate-100 uppercase tracking-wide">
                             Piezas, Consumibles & Vencimientos ({equipment.parts ? equipment.parts.length : 0})
                         </h2>
-                        <p className="text-xs text-slate-400">Baterías, filtros de aceite/combustible y correas críticas.</p>
+                        <p className="text-xs text-slate-400">Control de filtros de aceite, combustible, correas y baterías.</p>
                     </div>
                     <button
                         onClick={() => setShowPartModal(true)}
-                        className="flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs shadow-md shadow-indigo-600/20 active:scale-95 transition-all"
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-none font-heading font-bold text-xs uppercase tracking-wider transition-colors shadow-xs"
                     >
                         <Plus className="w-3.5 h-3.5" />
                         <span>Añadir Parte Crítica</span>
                     </button>
                 </div>
 
-                <div className="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl overflow-hidden shadow-sm">
+                <div className="bg-white dark:bg-[#1e2022] border border-slate-300 dark:border-[#333639] rounded-none overflow-hidden shadow-xs">
                     {(!equipment.parts || equipment.parts.length === 0) ? (
-                        <div className="py-12 text-center text-xs text-slate-400">No hay partes registradas para control preventivo.</div>
+                        <div className="py-12 text-center text-xs text-slate-400">No hay partes registradas para control preventivo de esta máquina.</div>
                     ) : (
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-slate-50 dark:bg-slate-900/40 text-slate-400 uppercase text-[11px] font-bold border-b border-slate-100 dark:border-slate-700/50">
+                        <table className="w-full text-left text-xs">
+                            <thead className="bg-[#f1f3f5] dark:bg-[#141517] text-slate-500 dark:text-slate-400 uppercase text-[10px] font-heading font-bold border-b border-slate-300 dark:border-[#333639] tracking-wider">
                                 <tr>
-                                    <th className="px-6 py-4">Repuesto / Parte</th>
-                                    <th className="px-6 py-4">Último Cambio</th>
-                                    <th className="px-6 py-4">Vida Útil</th>
-                                    <th className="px-6 py-4">Vencimiento Estimado</th>
-                                    <th className="px-6 py-4 text-right">Acción</th>
+                                    <th className="px-5 py-3">Repuesto / Parte</th>
+                                    <th className="px-5 py-3">Último Cambio</th>
+                                    <th className="px-5 py-3">Vida Útil Programada</th>
+                                    <th className="px-5 py-3">Vencimiento Estimado</th>
+                                    <th className="px-5 py-3 text-right">Acción</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                            <tbody className="divide-y divide-slate-200 dark:divide-[#333639]">
                                 {equipment.parts.map((part) => (
-                                    <tr key={part.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/20 transition-colors">
-                                        <td className="px-6 py-4">
+                                    <tr key={part.id} className="hover:bg-slate-100 dark:hover:bg-[#282a2d] transition-colors">
+                                        <td className="px-5 py-3">
                                             <div className="font-bold text-slate-800 dark:text-slate-100">{part.nombreParte}</div>
-                                            <div className="text-xs text-slate-400 font-mono">{part.codigoRepuesto || 'Sin código'}</div>
+                                            <div className="text-[11px] text-slate-400 font-mono">{part.codigoRepuesto || 'Sin código'}</div>
                                         </td>
-                                        <td className="px-6 py-4 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                                        <td className="px-5 py-3 text-xs font-mono font-semibold text-slate-600 dark:text-slate-300">
                                             {part.fechaUltimoCambio || 'No registrada'}
                                         </td>
-                                        <td className="px-6 py-4 text-xs text-slate-500">
+                                        <td className="px-5 py-3 text-xs font-mono text-slate-500">
                                             {part.vidaUtilMeses ? `${part.vidaUtilMeses} meses` : ''} 
                                             {part.vidaUtilHoras ? ` / ${part.vidaUtilHoras} hs` : ''}
                                         </td>
-                                        <td className="px-6 py-4">
+                                        <td className="px-5 py-3">
                                             {part.vencido ? (
-                                                <span className="px-2.5 py-1 bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 font-bold rounded-lg text-xs flex items-center gap-1 w-max">
-                                                    <AlertTriangle className="w-3.5 h-3.5" />
+                                                <span className="px-2 py-0.5 bg-rose-500/20 text-rose-400 border border-rose-500/30 font-mono font-bold rounded-none text-[10px] flex items-center gap-1 w-max">
+                                                    <AlertTriangle className="w-3 h-3 text-rose-400" />
                                                     <span>{part.fechaVencimientoEstimada} (Vencido)</span>
                                                 </span>
                                             ) : (
-                                                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                                <span className="text-xs font-mono font-semibold text-slate-700 dark:text-slate-300">
                                                     {part.fechaVencimientoEstimada || 'N/A'}
                                                 </span>
                                             )}
                                         </td>
-                                        <td className="px-6 py-4 text-right">
+                                        <td className="px-5 py-3 text-right">
                                             <button 
                                                 onClick={() => handleDeletePart(part.id!)}
-                                                className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg"
+                                                className="p-1.5 text-slate-400 hover:text-rose-500 transition-colors"
+                                                title="Eliminar Parte"
                                             >
                                                 <Trash2 className="w-4 h-4" />
                                             </button>
@@ -199,69 +205,74 @@ export function EquipmentDetail() {
 
             {/* Modal Añadir Parte */}
             {showPartModal && (
-                <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-                    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl max-w-md w-full p-6 shadow-2xl">
-                        <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">
-                            Añadir Componente Crítico a {equipment.nombre}
-                        </h3>
-                        <form onSubmit={handleAddPart} className="mt-4 space-y-4">
+                <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+                    <div className="bg-white dark:bg-[#1e2022] border border-slate-300 dark:border-[#333639] rounded-none max-w-md w-full p-5 shadow-2xl">
+                        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-[#333639]">
+                            <h3 className="text-sm font-heading font-black text-slate-800 dark:text-slate-100 uppercase tracking-wide">
+                                Añadir Componente Crítico
+                            </h3>
+                            <button onClick={() => setShowPartModal(false)} className="text-slate-400 hover:text-white">
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                        <form onSubmit={handleAddPart} className="mt-4 space-y-3">
                             <div>
-                                <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Nombre Componente / Repuesto *</label>
+                                <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">Nombre Componente / Repuesto *</label>
                                 <input
                                     type="text"
                                     required
                                     placeholder="Ej: Filtro de Aceite LF9009 / Batería 12V 110Ah"
                                     value={partForm.nombreParte}
                                     onChange={(e) => setPartForm({ ...partForm, nombreParte: e.target.value })}
-                                    className="w-full text-xs p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-indigo-500"
+                                    className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500"
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Código de Repuesto</label>
+                                <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">Código de Repuesto</label>
                                 <input
                                     type="text"
                                     placeholder="OEM / Fabricante"
                                     value={partForm.codigoRepuesto}
                                     onChange={(e) => setPartForm({ ...partForm, codigoRepuesto: e.target.value })}
-                                    className="w-full text-xs p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-indigo-500"
+                                    className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500 font-mono"
                                 />
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Vida Útil (Meses)</label>
+                                    <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">Vida Útil (Meses)</label>
                                     <input
                                         type="number"
                                         min={1}
                                         value={partForm.vidaUtilMeses}
                                         onChange={(e) => setPartForm({ ...partForm, vidaUtilMeses: parseInt(e.target.value) })}
-                                        className="w-full text-xs p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-indigo-500"
+                                        className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500 font-mono"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Vida Útil (Horas)</label>
+                                    <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">Vida Útil (Horas)</label>
                                     <input
                                         type="number"
                                         min={1}
                                         value={partForm.vidaUtilHoras}
                                         onChange={(e) => setPartForm({ ...partForm, vidaUtilHoras: parseFloat(e.target.value) })}
-                                        className="w-full text-xs p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-indigo-500"
+                                        className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500 font-mono"
                                     />
                                 </div>
                             </div>
 
-                            <div className="pt-2 flex items-center justify-end gap-2">
+                            <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-200 dark:border-[#333639]">
                                 <button
                                     type="button"
                                     onClick={() => setShowPartModal(false)}
-                                    className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 rounded-xl"
+                                    className="px-3.5 py-1.5 text-xs font-bold text-slate-400 hover:text-white rounded-none transition-colors"
                                 >
                                     Cancelar
                                 </button>
                                 <button
                                     type="submit"
-                                    className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md shadow-indigo-600/20 active:scale-95"
+                                    className="px-4 py-1.5 text-xs font-heading font-bold text-white bg-amber-600 hover:bg-amber-500 rounded-none shadow-xs uppercase tracking-wider transition-colors"
                                 >
                                     Guardar Parte
                                 </button>

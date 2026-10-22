@@ -52,7 +52,7 @@ export function Technicians() {
             setError(null);
         } catch (err: any) {
             console.error('Error fetching users:', err);
-            setError(err.response?.data?.message || 'Failed to connect to the server.');
+            setError(err.response?.data?.message || 'Error al conectar con el servidor.');
         } finally {
             setIsLoading(false);
         }
@@ -77,7 +77,7 @@ export function Technicians() {
             fetchUsers();
         } catch (err: any) {
             console.error('Failed to update user', err);
-            alert(err.response?.data || 'Failed to update user.');
+            alert(err.response?.data || 'Error al actualizar usuario.');
         } finally {
             setIsSubmitting(false);
         }
@@ -92,7 +92,7 @@ export function Technicians() {
             setInvitationLink(`${baseUrl}/register?token=${token}`);
         } catch (err: any) {
             console.error('Failed to generate invitation', err);
-            alert('Failed to generate invitation.');
+            alert('Error al generar enlace de invitación.');
         } finally {
             setIsSubmitting(false);
         }
@@ -113,13 +113,13 @@ export function Technicians() {
     };
 
     const handleDelete = async (id: number) => {
-        if (!window.confirm("Are you sure you want to delete this user?")) return;
+        if (!window.confirm("¿Confirmas la eliminación de este usuario del sistema?")) return;
         try {
             await apiClient.delete(`/users/${id}`);
             fetchUsers();
         } catch (err: any) {
             console.error('Failed to delete user', err);
-            alert(err.response?.data || 'Failed to delete user.');
+            alert(err.response?.data || 'Error al eliminar usuario.');
         }
     };
 
@@ -144,11 +144,19 @@ export function Technicians() {
     );
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 pb-4 border-b border-slate-200 dark:border-slate-700">
+        <div className="space-y-5 animate-fade-in">
+            {/* Header Industrial */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-300 dark:border-[#333639]">
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">Users</h1>
-                    <p className="text-slate-500 dark:text-slate-400 mt-1">Manage directory and permissions</p>
+                    <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-6 bg-amber-500 inline-block"></span>
+                        <h1 className="text-xl sm:text-2xl font-heading font-black tracking-tight text-slate-800 dark:text-slate-100 uppercase">
+                            Técnicos & Usuarios del Sistema
+                        </h1>
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 pl-4.5">
+                        Directorio de personal electromecánico, roles de acceso y credenciales activas.
+                    </p>
                 </div>
                 {isAdmin && (
                     <button
@@ -156,93 +164,114 @@ export function Technicians() {
                             setInvitationLink(null);
                             setIsInviteModalOpen(true);
                         }}
-                        className="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-medium transition-all shadow-md shadow-indigo-200 hover:shadow-lg hover:-translate-y-0.5 w-full sm:w-auto">
-                        <LinkIcon size={20} />
-                        <span>Invite User</span>
+                        className="flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-500 text-white px-4 py-2 rounded-none font-heading font-bold text-xs uppercase tracking-wider transition-colors shadow-xs"
+                    >
+                        <LinkIcon size={16} />
+                        <span>Invitar Nuevo Usuario</span>
                     </button>
                 )}
             </div>
 
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] dark:shadow-none border border-slate-100 dark:border-slate-700 overflow-hidden">
-                <div className="p-5 border-b border-slate-100 dark:border-slate-700 flex items-center gap-4 bg-slate-50/50 dark:bg-slate-800/50">
-                    <div className="relative flex-1 max-w-md">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500" size={20} />
-                        <input
-                            type="text"
-                            placeholder="Search users..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-indigo-500 focus:border-transparent transition-shadow"
-                        />
-                    </div>
-                </div>
+            {/* Barra de Búsqueda Angular */}
+            <div className="flex items-center gap-3 bg-white dark:bg-[#1e2022] border border-slate-300 dark:border-[#333639] p-2.5 rounded-none shadow-xs">
+                <Search className="w-4 h-4 text-slate-400 ml-1" />
+                <input
+                    type="text"
+                    placeholder="Buscar técnico por nombre, apellido o email..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full bg-transparent text-xs text-slate-800 dark:text-slate-100 outline-none placeholder:text-slate-400 font-sans"
+                />
+            </div>
 
+            {/* Tabla Angular Industrial */}
+            <div className="bg-white dark:bg-[#1e2022] border border-slate-300 dark:border-[#333639] rounded-none overflow-hidden shadow-xs">
                 <div className="overflow-x-auto min-h-[300px]">
                     {isLoading ? (
-                        <div className="flex flex-col items-center justify-center p-12 text-slate-400">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mb-4"></div>
-                            <p>Loading directory...</p>
+                        <div className="flex flex-col items-center justify-center p-16 text-slate-400">
+                            <Loader2 className="animate-spin text-amber-500 mb-3" size={28} />
+                            <p className="text-xs font-mono uppercase tracking-widest">Cargando directorio de técnicos...</p>
                         </div>
                     ) : error ? (
                         <div className="flex flex-col items-center justify-center p-12 text-rose-500">
                             <AlertCircle size={32} className="mb-2 opacity-50" />
-                            <p className="font-medium text-center">{error}</p>
+                            <p className="font-medium text-center text-xs">{error}</p>
                         </div>
                     ) : users.length === 0 ? (
                         <div className="flex flex-col items-center justify-center p-16 text-slate-400">
-                            <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4 border border-slate-100 shadow-sm">
-                                <Plus size={24} className="text-slate-300" />
+                            <div className="w-12 h-12 bg-slate-100 dark:bg-[#141517] rounded-none flex items-center justify-center mb-3 border border-slate-300 dark:border-[#333639]">
+                                <Plus size={20} className="text-slate-400" />
                             </div>
-                            <p className="font-medium text-slate-600 text-lg">No users found.</p>
-                            <p className="text-sm mt-1">Invite a new user to get started.</p>
+                            <p className="font-heading font-bold text-slate-700 dark:text-slate-200 text-sm uppercase">Sin usuarios registrados</p>
+                            <p className="text-xs mt-1">Genera un enlace de invitación para añadir técnicos.</p>
                         </div>
                     ) : (
-                        <table className="w-full text-left border-collapse min-w-[600px]">
-                            <thead>
-                                <tr className="bg-slate-50/80 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700 text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">
-                                    <th className="p-4 pl-6 text-xs sm:text-sm">Name</th>
-                                    <th className="p-4 text-xs sm:text-sm hidden md:table-cell">Email</th>
-                                    <th className="p-4 text-center text-xs sm:text-sm">Role</th>
-                                    <th className="p-4 text-xs sm:text-sm hidden sm:table-cell">Status</th>
-                                    <th className="p-4 pr-6 text-right text-xs sm:text-sm">Actions</th>
+                        <table className="w-full text-left text-xs">
+                            <thead className="bg-[#f1f3f5] dark:bg-[#141517] text-slate-500 dark:text-slate-400 uppercase text-[10px] font-heading font-bold border-b border-slate-300 dark:border-[#333639] tracking-wider">
+                                <tr>
+                                    <th className="px-5 py-3">Técnico / Nombre</th>
+                                    <th className="px-5 py-3 hidden md:table-cell">Email & Teléfono</th>
+                                    <th className="px-5 py-3 text-center">Rol Asignado</th>
+                                    <th className="px-5 py-3 text-center hidden sm:table-cell">Estado</th>
+                                    <th className="px-5 py-3 text-right">Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                            <tbody className="divide-y divide-slate-200 dark:divide-[#333639]">
                                 {filteredUsers.map((targetUser) => (
-                                    <tr key={targetUser.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-700/30 transition-colors group">
-                                        <td className="p-4 pl-6">
+                                    <tr key={targetUser.id} className="hover:bg-slate-100 dark:hover:bg-[#282a2d] transition-colors group">
+                                        <td className="px-5 py-3.5">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-indigo-100 to-blue-50 dark:from-indigo-900/50 dark:to-blue-900/30 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-bold text-xs sm:text-sm">
+                                                <div className="w-8 h-8 rounded-none bg-slate-200 dark:bg-[#141517] text-amber-500 border border-slate-300 dark:border-[#333639] flex items-center justify-center font-heading font-black text-xs">
                                                     {(targetUser.nombre?.charAt(0) || '') + (targetUser.apellido?.charAt(0) || '')}
                                                 </div>
-                                                <div className="font-semibold text-slate-800 dark:text-slate-100 text-xs sm:text-base">{targetUser.nombre} {targetUser.apellido}</div>
+                                                <div>
+                                                    <div className="font-bold text-slate-800 dark:text-slate-100 text-xs">{targetUser.nombre} {targetUser.apellido}</div>
+                                                    <div className="text-[11px] text-slate-400 md:hidden">{targetUser.email}</div>
+                                                </div>
                                             </div>
                                         </td>
-                                        <td className="p-4 text-slate-600 dark:text-slate-300 font-medium text-xs sm:text-sm hidden md:table-cell">{targetUser.email || '-'}</td>
-                                        <td className="p-4 text-center">
-                                            <span className={`px-2 py-1 rounded text-[9px] sm:text-[10px] font-black uppercase tracking-wider ${targetUser.role === 'SUPER_ADMIN' ? 'bg-amber-100 text-amber-700 border border-amber-200' :
-                                                targetUser.role === 'ADMIN' ? 'bg-indigo-100 text-indigo-700' :
-                                                    'bg-slate-100 text-slate-600'
-                                                }`}>
-                                                {targetUser.role}
+                                        <td className="px-5 py-3.5 text-slate-600 dark:text-slate-300 font-mono text-xs hidden md:table-cell">
+                                            <div>{targetUser.email || '-'}</div>
+                                            <div className="text-[11px] text-slate-400">{targetUser.telefono || 'Sin teléfono'}</div>
+                                        </td>
+                                        <td className="px-5 py-3.5 text-center">
+                                            <span className={`px-2 py-0.5 rounded-none text-[10px] font-mono font-bold uppercase tracking-wider border ${
+                                                targetUser.role === 'SUPER_ADMIN' 
+                                                    ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
+                                                targetUser.role === 'ADMIN' 
+                                                    ? 'bg-slate-200 dark:bg-[#141517] text-slate-800 dark:text-slate-200 border-slate-400 dark:border-[#333639]' :
+                                                    'bg-slate-100 dark:bg-[#141517] text-slate-600 dark:text-slate-400 border-slate-300 dark:border-[#333639]'
+                                            }`}>
+                                                {targetUser.role === 'SUPER_ADMIN' ? 'Super Admin' : targetUser.role === 'ADMIN' ? 'Administrador' : 'Técnico'}
                                             </span>
                                         </td>
-                                        <td className="p-4 hidden sm:table-cell">
-                                            <span className={`px-3 py-1.5 rounded-full text-[10px] sm:text-xs font-bold ${(!targetUser.status || targetUser.status === 'ACTIVE') ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                                                }`}>
+                                        <td className="px-5 py-3.5 text-center hidden sm:table-cell">
+                                            <span className={`px-2 py-0.5 rounded-none text-[10px] font-mono font-bold uppercase border ${
+                                                (!targetUser.status || targetUser.status === 'ACTIVE') 
+                                                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
+                                                    : 'bg-rose-500/20 text-rose-400 border-rose-500/30'
+                                            }`}>
                                                 {targetUser.status || 'ACTIVE'}
                                             </span>
                                         </td>
-                                        <td className="p-4 pr-6">
-                                            <div className="flex gap-1 justify-end sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <td className="px-5 py-3.5 text-right">
+                                            <div className="flex gap-1 justify-end">
                                                 {canEdit(targetUser) && (
-                                                    <button onClick={() => handleEditClick(targetUser)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
-                                                        <Edit2 size={16} />
+                                                    <button 
+                                                        onClick={() => handleEditClick(targetUser)} 
+                                                        className="p-1.5 text-slate-400 hover:text-amber-500 transition-colors"
+                                                        title="Editar Técnico"
+                                                    >
+                                                        <Edit2 size={15} />
                                                     </button>
                                                 )}
                                                 {canDelete(targetUser) && (
-                                                    <button onClick={() => handleDelete(targetUser.id)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors">
-                                                        <Trash2 size={16} />
+                                                    <button 
+                                                        onClick={() => handleDelete(targetUser.id)} 
+                                                        className="p-1.5 text-slate-400 hover:text-rose-500 transition-colors"
+                                                        title="Eliminar Usuario"
+                                                    >
+                                                        <Trash2 size={15} />
                                                     </button>
                                                 )}
                                             </div>
@@ -257,72 +286,88 @@ export function Technicians() {
 
             {/* Invite Modal */}
             {isInviteModalOpen && (
-                <div className="modal-overlay">
-                    <div className="modal-content">
-                        <div className="modal-header">
-                            <h2 className="modal-title flex items-center gap-2">
-                                <LinkIcon size={20} className="text-indigo-500" />
-                                Invite New User
+                <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+                    <div className="bg-white dark:bg-[#1e2022] border border-slate-300 dark:border-[#333639] rounded-none max-w-md w-full p-5 shadow-2xl">
+                        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-[#333639]">
+                            <h2 className="text-sm font-heading font-black text-slate-800 dark:text-slate-100 uppercase tracking-wide flex items-center gap-2">
+                                <LinkIcon size={16} className="text-amber-500" />
+                                <span>Invitar Nuevo Usuario</span>
                             </h2>
-                            <button onClick={() => setIsInviteModalOpen(false)} className="close-btn">
-                                <X size={20} />
+                            <button onClick={() => setIsInviteModalOpen(false)} className="text-slate-400 hover:text-white">
+                                <X size={18} />
                             </button>
                         </div>
-                        <div className="modal-body space-y-4">
+                        <div className="mt-4 space-y-4">
                             {!invitationLink ? (
                                 <>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400">Select the role for the new user. The generated link will expire in 2 hours and can only be used once.</p>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                        Selecciona el rol asignado para el nuevo usuario. El enlace generado expira en 2 horas y es de un solo uso.
+                                    </p>
                                     <div>
-                                        <label className="form-label">Registration Role</label>
+                                        <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-2">Rol de Registro</label>
                                         <div className="grid grid-cols-2 gap-3">
                                             <button
+                                                type="button"
                                                 onClick={() => setInviteRole('TECH')}
-                                                className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${inviteRole === 'TECH' ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'border-slate-100 dark:border-slate-700'}`}
+                                                className={`p-3 rounded-none border transition-all flex flex-col items-center gap-1.5 ${
+                                                    inviteRole === 'TECH' 
+                                                        ? 'border-amber-500 bg-amber-500/10 text-amber-500 font-bold' 
+                                                        : 'border-slate-300 dark:border-[#333639] text-slate-400'
+                                                }`}
                                             >
-                                                <UserIcon size={24} className={inviteRole === 'TECH' ? 'text-indigo-600' : 'text-slate-400'} />
-                                                <span className="font-bold">Technician</span>
+                                                <UserIcon size={20} className={inviteRole === 'TECH' ? 'text-amber-500' : 'text-slate-400'} />
+                                                <span className="text-xs font-heading">Técnico</span>
                                             </button>
                                             <button
+                                                type="button"
                                                 onClick={() => setInviteRole('ADMIN')}
-                                                className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${inviteRole === 'ADMIN' ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'border-slate-100 dark:border-slate-700'}`}
+                                                className={`p-3 rounded-none border transition-all flex flex-col items-center gap-1.5 ${
+                                                    inviteRole === 'ADMIN' 
+                                                        ? 'border-amber-500 bg-amber-500/10 text-amber-500 font-bold' 
+                                                        : 'border-slate-300 dark:border-[#333639] text-slate-400'
+                                                }`}
                                             >
-                                                <Shield size={24} className={inviteRole === 'ADMIN' ? 'text-indigo-600' : 'text-slate-400'} />
-                                                <span className="font-bold">Administrator</span>
+                                                <Shield size={20} className={inviteRole === 'ADMIN' ? 'text-amber-500' : 'text-slate-400'} />
+                                                <span className="text-xs font-heading">Administrador</span>
                                             </button>
                                         </div>
                                     </div>
                                     <button
                                         onClick={handleInviteUser}
                                         disabled={isSubmitting}
-                                        className="w-full btn btn-primary flex items-center justify-center gap-2 py-3"
+                                        className="w-full bg-amber-600 hover:bg-amber-500 text-white font-heading font-bold text-xs uppercase tracking-wider py-2.5 rounded-none flex items-center justify-center gap-2 transition-colors"
                                     >
-                                        {isSubmitting ? <Loader2 size={20} className="animate-spin" /> : <LinkIcon size={20} />}
-                                        Generate Invitation Link
+                                        {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <LinkIcon size={16} />}
+                                        <span>Generar Enlace de Invitación</span>
                                     </button>
                                 </>
                             ) : (
-                                <div className="space-y-4 animate-fade-in">
-                                    <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 rounded-xl text-emerald-700 dark:text-emerald-400 text-sm font-medium">
-                                        Invitation link generated successfully! Send this URL to the user.
+                                <div className="space-y-3 animate-fade-in">
+                                    <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-none text-emerald-400 text-xs font-medium">
+                                        ¡Enlace generado exitosamente! Envíalo al técnico correspondiente:
                                     </div>
-                                    <div className="relative group">
+                                    <div className="relative">
                                         <input
                                             readOnly
                                             value={invitationLink}
-                                            className="w-full pr-12 pl-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-300 font-mono text-xs outline-none"
+                                            className="w-full pr-10 pl-3 py-2 bg-slate-50 dark:bg-[#141517] border border-slate-300 dark:border-[#333639] rounded-none text-slate-600 dark:text-slate-300 font-mono text-[11px] outline-none"
                                         />
                                         <button
                                             onClick={() => {
                                                 navigator.clipboard.writeText(invitationLink);
-                                                alert('Copied to clipboard!');
+                                                alert('¡Enlace copiado al portapapeles!');
                                             }}
-                                            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                                            className="absolute right-1 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-white transition-colors"
+                                            title="Copiar Enlace"
                                         >
-                                            <LinkIcon size={16} />
+                                            <LinkIcon size={14} />
                                         </button>
                                     </div>
-                                    <button onClick={() => setIsInviteModalOpen(false)} className="w-full btn btn-secondary py-3">
-                                        Done
+                                    <button 
+                                        onClick={() => setIsInviteModalOpen(false)} 
+                                        className="w-full py-2 bg-slate-200 dark:bg-[#282a2d] hover:bg-slate-300 text-slate-800 dark:text-slate-200 font-heading font-bold text-xs uppercase tracking-wider rounded-none transition-colors"
+                                    >
+                                        Cerrar
                                     </button>
                                 </div>
                             )}
@@ -333,96 +378,114 @@ export function Technicians() {
 
             {/* Edit User Modal */}
             {isEditModalOpen && (
-                <div className="modal-overlay">
-                    <div className="modal-content">
-                        <div className="modal-header">
-                            <h2 className="modal-title">Edit User</h2>
-                            <button onClick={() => setIsEditModalOpen(false)} className="close-btn">
-                                <X size={20} />
+                <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+                    <div className="bg-white dark:bg-[#1e2022] border border-slate-300 dark:border-[#333639] rounded-none max-w-md w-full p-5 shadow-2xl">
+                        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-[#333639]">
+                            <h2 className="text-sm font-heading font-black text-slate-800 dark:text-slate-100 uppercase tracking-wide">
+                                Editar Usuario
+                            </h2>
+                            <button onClick={() => setIsEditModalOpen(false)} className="text-slate-400 hover:text-white">
+                                <X size={18} />
                             </button>
                         </div>
-                        <form onSubmit={handleUpdateUser} className="flex flex-col h-full overflow-hidden">
-                            <div className="modal-body space-y-4">
-                                <div className="flex gap-4">
-                                    <div className="flex-1">
-                                        <label className="form-label">First Name</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            value={formData.nombre}
-                                            onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                                            className="form-input"
-                                        />
-                                    </div>
-                                    <div className="flex-1">
-                                        <label className="form-label">Last Name</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            value={formData.apellido}
-                                            onChange={(e) => setFormData({ ...formData, apellido: e.target.value })}
-                                            className="form-input"
-                                        />
-                                    </div>
-                                </div>
+                        <form onSubmit={handleUpdateUser} className="mt-4 space-y-3">
+                            <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="form-label">Email Address</label>
+                                    <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">Nombre *</label>
                                     <input
-                                        type="email"
+                                        type="text"
                                         required
-                                        value={formData.email}
-                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                        className="form-input"
+                                        value={formData.nombre}
+                                        onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                                        className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500"
                                     />
                                 </div>
                                 <div>
-                                    <label className="form-label">Password (Leave blank to keep current)</label>
+                                    <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">Apellido *</label>
                                     <input
-                                        type="password"
-                                        value={formData.password}
-                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                        className="form-input"
-                                        placeholder="••••••••"
+                                        type="text"
+                                        required
+                                        value={formData.apellido}
+                                        onChange={(e) => setFormData({ ...formData, apellido: e.target.value })}
+                                        className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500"
                                     />
-                                </div>
-                                <div className="flex gap-4">
-                                    <div className="flex-1">
-                                        <label className="form-label">Role</label>
-                                        <select
-                                            disabled={
-                                                formData.role === 'SUPER_ADMIN' ||
-                                                (!isSuperAdmin && formData.role === 'ADMIN') ||
-                                                (!isAdmin)
-                                            }
-                                            value={formData.role}
-                                            onChange={(e) => setFormData({ ...formData, role: e.target.value as User['role'] })}
-                                            className="form-select disabled:opacity-50"
-                                        >
-                                            <option value="TECH">Technician</option>
-                                            <option value="ADMIN">Administrator</option>
-                                            {formData.role === 'SUPER_ADMIN' && <option value="SUPER_ADMIN">Super Admin</option>}
-                                        </select>
-                                    </div>
-                                    <div className="flex-1">
-                                        <label className="form-label">Status</label>
-                                        <select
-                                            value={formData.status}
-                                            onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                                            className="form-select"
-                                        >
-                                            <option value="ACTIVE">Active</option>
-                                            <option value="INACTIVE">Inactive</option>
-                                        </select>
-                                    </div>
                                 </div>
                             </div>
-                            <div className="modal-footer">
-                                <button type="button" onClick={() => setIsEditModalOpen(false)} className="btn btn-secondary">
-                                    Cancel
+                            <div>
+                                <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">Email *</label>
+                                <input
+                                    type="email"
+                                    required
+                                    value={formData.email}
+                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                    className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500 font-mono"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">Teléfono</label>
+                                <input
+                                    type="text"
+                                    value={formData.telefono}
+                                    onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
+                                    className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500 font-mono"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">Contraseña (Dejar en blanco para mantener)</label>
+                                <input
+                                    type="password"
+                                    value={formData.password}
+                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                    className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500"
+                                    placeholder="••••••••"
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">Rol</label>
+                                    <select
+                                        disabled={
+                                            formData.role === 'SUPER_ADMIN' ||
+                                            (!isSuperAdmin && formData.role === 'ADMIN') ||
+                                            (!isAdmin)
+                                        }
+                                        value={formData.role}
+                                        onChange={(e) => setFormData({ ...formData, role: e.target.value as User['role'] })}
+                                        className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500 disabled:opacity-50"
+                                    >
+                                        <option value="TECH">Técnico</option>
+                                        <option value="ADMIN">Administrador</option>
+                                        {formData.role === 'SUPER_ADMIN' && <option value="SUPER_ADMIN">Super Admin</option>}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">Estado</label>
+                                    <select
+                                        value={formData.status}
+                                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                                        className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500"
+                                    >
+                                        <option value="ACTIVE">Activo</option>
+                                        <option value="INACTIVE">Inactivo</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-200 dark:border-[#333639]">
+                                <button 
+                                    type="button" 
+                                    onClick={() => setIsEditModalOpen(false)} 
+                                    className="px-3.5 py-1.5 text-xs font-bold text-slate-400 hover:text-white rounded-none transition-colors"
+                                >
+                                    Cancelar
                                 </button>
-                                <button type="submit" disabled={isSubmitting} className="btn btn-primary flex items-center gap-2">
-                                    {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <Edit2 size={18} />}
-                                    <span>Update User</span>
+                                <button 
+                                    type="submit" 
+                                    disabled={isSubmitting} 
+                                    className="px-4 py-1.5 text-xs font-heading font-bold text-white bg-amber-600 hover:bg-amber-500 rounded-none shadow-xs uppercase tracking-wider flex items-center gap-2 transition-colors"
+                                >
+                                    {isSubmitting ? <Loader2 className="animate-spin" size={16} /> : <Edit2 size={16} />}
+                                    <span>Actualizar Usuario</span>
                                 </button>
                             </div>
                         </form>

@@ -80,11 +80,11 @@ export function MainLayout() {
     ];
 
     return (
-        <div className="min-h-screen bg-[#f1f3f5] dark:bg-[#141517] flex flex-col font-sans transition-colors duration-150">
+        <div className="h-screen h-[100dvh] w-screen bg-[#f1f3f5] dark:bg-[#141517] flex flex-col font-sans transition-colors duration-150 overflow-hidden">
             <CommandPalette isOpen={paletteOpen} onClose={() => setPaletteOpen(false)} />
 
             {/* Barra de Título Superior en Color de Acento AF / Charcoal */}
-            <header className="bg-[#2d3033] dark:bg-[#1c1d1f] text-white border-b border-[#3f4246] dark:border-[#2a2c2e] sticky top-0 z-30 h-14 flex items-center justify-between px-3 sm:px-5 shadow-xs">
+            <header className="bg-[#2d3033] dark:bg-[#1c1d1f] text-white border-b border-[#3f4246] dark:border-[#2a2c2e] shrink-0 z-30 h-14 flex items-center justify-between px-3 sm:px-5 shadow-xs">
                 <div className="flex items-center gap-3">
                     <button 
                         onClick={() => setSidebarOpen(!sidebarOpen)} 
@@ -130,7 +130,7 @@ export function MainLayout() {
                     >
                         <Bell size={18} />
                         {alertsCount > 0 && (
-                            <span className="absolute top-1 right-1 w-3.5 h-3.5 bg-rose-600 text-white rounded-full text-[9px] font-bold flex items-center justify-center">
+                            <span className="absolute top-1 right-1 px-1 min-w-[14px] h-3.5 bg-rose-600 text-white rounded-none text-[9px] font-mono font-bold flex items-center justify-center">
                                 {alertsCount}
                             </span>
                         )}
@@ -188,8 +188,8 @@ export function MainLayout() {
                 </div>
             </header>
 
-            {/* Layout Principal: Menú Lateral Fijo sin Scroll General del Body */}
-            <div className="flex flex-1 overflow-hidden relative">
+            {/* Layout Principal: Menú Lateral Fijo y Contenedor de Scroll Interno Único */}
+            <div className="flex flex-1 overflow-hidden relative w-full h-[calc(100dvh-3.5rem)]">
                 {sidebarOpen && (
                     <div
                         className="fixed inset-0 bg-black/50 z-30 lg:hidden"
@@ -199,9 +199,9 @@ export function MainLayout() {
 
                 {/* Menú Lateral Industrial Gris Carbón & Acento AF (Ámbar) */}
                 <aside className={`
-                    fixed inset-y-0 left-0 z-40 bg-[#3a3b3b] dark:bg-[#1e2022] text-slate-200 border-r border-[#4d5053] dark:border-[#2a2c2e] flex flex-col shadow-lg transition-all duration-150
+                    fixed inset-y-0 left-0 top-14 z-40 bg-[#3a3b3b] dark:bg-[#1e2022] text-slate-200 border-r border-[#4d5053] dark:border-[#2a2c2e] flex flex-col shadow-lg transition-all duration-150 h-[calc(100dvh-3.5rem)]
                     ${sidebarOpen ? 'w-60 translate-x-0' : '-translate-x-full lg:translate-x-0 lg:w-16'}
-                    lg:relative
+                    lg:static lg:h-full lg:shrink-0
                 `}>
                     <nav className="p-2 space-y-4 flex-1 overflow-y-auto">
                         {navSections.map((section, idx) => (
@@ -259,7 +259,7 @@ export function MainLayout() {
                 </aside>
 
                 {/* Área de Trabajo Principal */}
-                <main className="flex-1 overflow-y-auto p-4 sm:p-6 bg-[#f1f3f5] dark:bg-[#141517] relative">
+                <main className="flex-1 overflow-y-auto h-full p-4 sm:p-6 bg-[#f1f3f5] dark:bg-[#141517] relative">
                     <div className="max-w-7xl mx-auto">
                         <Outlet />
                     </div>

@@ -1,46 +1,34 @@
-import { ServerCrash, RefreshCw } from 'lucide-react';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 export function ServiceUnavailable() {
-    const handleRetry = () => {
-        window.location.reload();
+    const handleReload = () => {
+        window.location.href = '/';
     };
 
     return (
-        <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 relative overflow-hidden">
-            {/* Background design elements */}
-            <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
-                <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full blur-[120px] bg-rose-600/10"></div>
-                <div className="absolute top-[60%] -right-[10%] w-[40%] h-[60%] rounded-full blur-[100px] bg-indigo-500/10"></div>
-            </div>
-
-            <div className="max-w-md w-full text-center relative z-10 animate-fade-in">
-                <div className="mb-8 relative inline-block">
-                    <div className="w-24 h-24 bg-rose-500/20 rounded-3xl flex items-center justify-center mx-auto border border-rose-500/30 shadow-2xl shadow-rose-500/20 relative z-10">
-                        <ServerCrash size={48} className="text-rose-500" />
-                    </div>
-                    <div className="absolute inset-0 bg-rose-500 blur-2xl opacity-20 animate-pulse"></div>
+        <div className="min-h-screen bg-[#141517] flex items-center justify-center p-4 relative font-sans">
+            <div className="max-w-md w-full bg-[#1e2022] border border-[#333639] p-8 text-center space-y-5 rounded-none shadow-2xl relative z-10 animate-fade-in">
+                <div className="w-16 h-16 bg-rose-500/10 border border-rose-500/30 flex items-center justify-center mx-auto text-rose-500">
+                    <AlertTriangle size={32} />
                 </div>
 
-                <h1 className="text-4xl font-black text-white mb-4 tracking-tight">
-                    Service <span className="text-rose-500">Unavailable</span>
-                </h1>
-
-                <p className="text-slate-400 text-lg mb-10 leading-relaxed font-medium">
-                    The backend system is currently unreachable or undergoing maintenance. We're unable to establish a connection (Error 502).
-                </p>
-
-                <div className="space-y-4">
-                    <button
-                        onClick={handleRetry}
-                        className="w-full bg-white hover:bg-slate-100 text-slate-900 font-bold py-4 rounded-2xl transition-all shadow-xl hover:shadow-white/10 active:scale-[0.98] flex items-center justify-center gap-3 uppercase tracking-wider"
-                    >
-                        <RefreshCw size={20} className="text-slate-900" />
-                        <span>Retry Connection</span>
-                    </button>
-
-                    <p className="text-slate-500 text-xs font-semibold uppercase tracking-widest mt-6">
-                        System Status: <span className="text-rose-500 animate-pulse">Offline</span>
+                <div>
+                    <h1 className="text-xl font-heading font-black text-white uppercase tracking-tight">
+                        Sistema Temporalmente No Disponible
+                    </h1>
+                    <p className="text-slate-400 text-xs mt-2 leading-relaxed">
+                        No fue posible comunicarse con el servicio central de AF-CRM. El equipo técnico puede estar ejecutando tareas de mantenimiento.
                     </p>
+                </div>
+
+                <div className="pt-2">
+                    <button
+                        onClick={handleReload}
+                        className="w-full bg-amber-600 hover:bg-amber-500 text-white font-heading font-bold py-2.5 px-4 rounded-none transition-colors uppercase tracking-wider text-xs flex items-center justify-center gap-2"
+                    >
+                        <RefreshCw size={15} />
+                        <span>Reintentar Conexión</span>
+                    </button>
                 </div>
             </div>
         </div>

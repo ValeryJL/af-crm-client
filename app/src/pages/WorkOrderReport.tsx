@@ -93,56 +93,57 @@ export function WorkOrderReport() {
         }
     };
 
-    if (loading) return <div className="py-16 text-center text-xs text-slate-400">Cargando reporte de campo...</div>;
-    if (!order) return <div className="py-16 text-center text-slate-500">Orden de trabajo no encontrada</div>;
+    if (loading) return <div className="py-16 text-center text-xs font-mono text-slate-400 uppercase tracking-widest">Cargando reporte de campo...</div>;
+    if (!order) return <div className="py-16 text-center text-slate-400 text-xs">Orden de trabajo no encontrada</div>;
 
     const isCompleted = order.estado === 'COMPLETADA';
 
     return (
-        <div className="max-w-3xl mx-auto space-y-6 pb-12">
+        <div className="max-w-3xl mx-auto space-y-5 pb-12 animate-fade-in">
             {/* Top Navigation */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 pb-4 border-b border-slate-300 dark:border-[#333639]">
                 <button 
                     onClick={() => navigate('/work-orders')} 
-                    className="p-2 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800 transition-colors"
+                    className="p-2 text-slate-400 hover:text-white hover:bg-slate-200 dark:hover:bg-[#282a2d] rounded-none transition-colors"
+                    title="Volver a Órdenes"
                 >
                     <ArrowLeft className="w-5 h-5" />
                 </button>
-                <div>
+                <div className="flex-1">
                     <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-bold text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/60 px-2 py-0.5 rounded border border-sky-100 dark:border-sky-900/40">
+                        <span className="font-mono text-xs font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-none border border-amber-500/30">
                             {order.numeroOt}
                         </span>
-                        <h1 className="text-xl sm:text-2xl font-heading font-extrabold text-slate-900 dark:text-slate-100">
-                            Reporte de Servicio en Campo
+                        <h1 className="text-xl sm:text-2xl font-heading font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">
+                            Reporte Técnico Electromecánico
                         </h1>
                     </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    <p className="text-xs text-slate-400 mt-0.5 font-mono">
                         {order.clientRazonSocial} — {order.serviceNombre} ({order.direccionFisica})
                     </p>
                 </div>
             </div>
 
             {isCompleted && (
-                <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl flex items-center gap-3 text-emerald-800 dark:text-emerald-300">
+                <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-none flex items-center gap-3 text-emerald-400">
                     <CheckCircle2 className="w-5 h-5 shrink-0" />
-                    <span className="text-xs font-bold">Esta orden fue completada con éxito. El ciclo preventivo y SLA del servicio han sido recalculados.</span>
+                    <span className="text-xs font-mono font-bold">Esta orden fue completada con éxito. El ciclo preventivo y SLA del servicio han sido recalculados.</span>
                 </div>
             )}
 
-            <form onSubmit={handleCompleteReport} className="space-y-6">
+            <form onSubmit={handleCompleteReport} className="space-y-5">
                 {/* 1. Medición de Parámetros de Operación */}
-                <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
-                    <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
-                        <Gauge className="w-4 h-4 text-sky-600 dark:text-sky-400" />
-                        <h2 className="text-xs font-heading font-bold text-slate-800 dark:text-slate-100 uppercase tracking-wide">
-                            1. Parámetros Técnicos & Mediciones Electromecánicas
+                <div className="bg-white dark:bg-[#1e2022] p-5 rounded-none border border-slate-300 dark:border-[#333639] shadow-xs space-y-4">
+                    <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-[#333639]">
+                        <Gauge className="w-4 h-4 text-amber-500" />
+                        <h2 className="text-xs font-heading font-black text-slate-800 dark:text-slate-100 uppercase tracking-wide">
+                            1. Parámetros Técnicos & Mediciones en Operación
                         </h2>
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         <div>
-                            <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
                                 Horómetro Leído (hs)
                             </label>
                             <input
@@ -151,12 +152,12 @@ export function WorkOrderReport() {
                                 disabled={isCompleted}
                                 value={horometro}
                                 onChange={(e) => setHorometro(parseFloat(e.target.value))}
-                                className="w-full text-sm font-bold p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-sky-500"
+                                className="w-full text-xs font-mono font-bold p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-900 dark:text-slate-100 outline-none focus:border-amber-500"
                             />
                         </div>
 
                         <div>
-                            <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
                                 Tensión Generada (V)
                             </label>
                             <input
@@ -164,12 +165,12 @@ export function WorkOrderReport() {
                                 disabled={isCompleted}
                                 value={tension}
                                 onChange={(e) => setTension(e.target.value)}
-                                className="w-full text-sm font-bold p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-sky-500"
+                                className="w-full text-xs font-mono font-bold p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-900 dark:text-slate-100 outline-none focus:border-amber-500"
                             />
                         </div>
 
                         <div>
-                            <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
                                 Frecuencia (Hz)
                             </label>
                             <input
@@ -177,12 +178,12 @@ export function WorkOrderReport() {
                                 disabled={isCompleted}
                                 value={frecuencia}
                                 onChange={(e) => setFrecuencia(e.target.value)}
-                                className="w-full text-sm font-bold p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-sky-500"
+                                className="w-full text-xs font-mono font-bold p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-900 dark:text-slate-100 outline-none focus:border-amber-500"
                             />
                         </div>
 
                         <div>
-                            <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
                                 Presión Aceite (bar)
                             </label>
                             <input
@@ -190,12 +191,12 @@ export function WorkOrderReport() {
                                 disabled={isCompleted}
                                 value={presionAceite}
                                 onChange={(e) => setPresionAceite(e.target.value)}
-                                className="w-full text-sm font-bold p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-sky-500"
+                                className="w-full text-xs font-mono font-bold p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-900 dark:text-slate-100 outline-none focus:border-amber-500"
                             />
                         </div>
 
                         <div>
-                            <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
                                 Temperatura Motor (°C)
                             </label>
                             <input
@@ -203,20 +204,20 @@ export function WorkOrderReport() {
                                 disabled={isCompleted}
                                 value={tempMotor}
                                 onChange={(e) => setTempMotor(e.target.value)}
-                                className="w-full text-sm font-bold p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-sky-500"
+                                className="w-full text-xs font-mono font-bold p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-900 dark:text-slate-100 outline-none focus:border-amber-500"
                             />
                         </div>
 
                         <div>
-                            <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                                Nivel Tanque Combustible (%)
+                            <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
+                                Nivel Combustible (%)
                             </label>
                             <input
                                 type="text"
                                 disabled={isCompleted}
                                 value={nivelCombustible}
                                 onChange={(e) => setNivelCombustible(e.target.value)}
-                                className="w-full text-sm font-bold p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-sky-500"
+                                className="w-full text-xs font-mono font-bold p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-900 dark:text-slate-100 outline-none focus:border-amber-500"
                             />
                         </div>
                     </div>
@@ -224,10 +225,10 @@ export function WorkOrderReport() {
 
                 {/* 2. Checklist de Reemplazo de Partes Críticas */}
                 {service && service.equipments && service.equipments.length > 0 && (
-                    <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
-                        <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
-                            <Wrench className="w-4 h-4 text-sky-600 dark:text-sky-400" />
-                            <h2 className="text-xs font-heading font-bold text-slate-800 dark:text-slate-100 uppercase tracking-wide">
+                    <div className="bg-white dark:bg-[#1e2022] p-5 rounded-none border border-slate-300 dark:border-[#333639] shadow-xs space-y-3">
+                        <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-[#333639]">
+                            <Wrench className="w-4 h-4 text-amber-500" />
+                            <h2 className="text-xs font-heading font-black text-slate-800 dark:text-slate-100 uppercase tracking-wide">
                                 2. Sustitución de Consumibles y Partes en esta Visita
                             </h2>
                         </div>
@@ -236,7 +237,7 @@ export function WorkOrderReport() {
                             {service.equipments.flatMap(eq => (eq.parts || []).map(part => (
                                 <label 
                                     key={part.id} 
-                                    className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                    className="flex items-center justify-between p-3 bg-slate-50 dark:bg-[#141517] rounded-none border border-slate-200 dark:border-[#333639] cursor-pointer hover:border-amber-500 transition-colors"
                                 >
                                     <div className="flex items-center gap-3">
                                         <input
@@ -247,18 +248,18 @@ export function WorkOrderReport() {
                                                 ...repuestosReemplazados,
                                                 [String(part.id)]: e.target.checked
                                             })}
-                                            className="w-4 h-4 rounded text-sky-600 focus:ring-sky-500"
+                                            className="w-4 h-4 rounded-none text-amber-600 focus:ring-amber-500"
                                         />
                                         <div>
                                             <span className="font-bold text-xs text-slate-900 dark:text-slate-100 block">
                                                 {part.nombreParte}
                                             </span>
-                                            <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                                            <span className="text-[10px] text-slate-400 font-mono">
                                                 {eq.nombre} — Código: {part.codigoRepuesto || 'N/A'}
                                             </span>
                                         </div>
                                     </div>
-                                    <span className="text-[11px] font-bold text-sky-700 dark:text-sky-300">
+                                    <span className="text-[10px] font-mono font-bold text-amber-500 uppercase">
                                         {repuestosReemplazados[String(part.id)] ? 'Reemplazado Hoy' : 'Sin cambio'}
                                     </span>
                                 </label>
@@ -268,17 +269,17 @@ export function WorkOrderReport() {
                 )}
 
                 {/* 3. Firma y Cierre */}
-                <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
-                    <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
-                        <FileText className="w-4 h-4 text-sky-600 dark:text-sky-400" />
-                        <h2 className="text-xs font-heading font-bold text-slate-800 dark:text-slate-100 uppercase tracking-wide">
+                <div className="bg-white dark:bg-[#1e2022] p-5 rounded-none border border-slate-300 dark:border-[#333639] shadow-xs space-y-3">
+                    <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-[#333639]">
+                        <FileText className="w-4 h-4 text-amber-500" />
+                        <h2 className="text-xs font-heading font-black text-slate-800 dark:text-slate-100 uppercase tracking-wide">
                             3. Conformidad del Cliente & Observaciones Finales
                         </h2>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
                                 Nombre y Apellido del Responsable Receptor *
                             </label>
                             <input
@@ -288,12 +289,12 @@ export function WorkOrderReport() {
                                 placeholder="Ej: Roberto Pérez"
                                 value={firmaNombre}
                                 onChange={(e) => setFirmaNombre(e.target.value)}
-                                className="w-full text-xs p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-sky-500"
+                                className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-900 dark:text-slate-100 outline-none focus:border-amber-500"
                             />
                         </div>
 
                         <div>
-                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
                                 DNI / Documento del Responsable *
                             </label>
                             <input
@@ -303,13 +304,13 @@ export function WorkOrderReport() {
                                 placeholder="Ej: 32.456.789"
                                 value={firmaDni}
                                 onChange={(e) => setFirmaDni(e.target.value)}
-                                className="w-full text-xs p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-sky-500"
+                                className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-900 dark:text-slate-100 outline-none focus:border-amber-500 font-mono"
                             />
                         </div>
                     </div>
 
                     <div>
-                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
                             Observaciones Técnicas de Cierre
                         </label>
                         <textarea
@@ -318,24 +319,24 @@ export function WorkOrderReport() {
                             placeholder="Se ejecutó prueba de carga en vacío por 20 minutos sin anomalías térmicas..."
                             value={observaciones}
                             onChange={(e) => setObservaciones(e.target.value)}
-                            className="w-full text-xs p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-sky-500"
+                            className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-900 dark:text-slate-100 outline-none focus:border-amber-500 font-sans"
                         />
                     </div>
                 </div>
 
                 {!isCompleted && (
-                    <div className="flex items-center justify-end gap-3 pt-2">
+                    <div className="flex items-center justify-end gap-2 pt-2">
                         <button
                             type="button"
                             onClick={() => navigate('/work-orders')}
-                            className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800 rounded-lg"
+                            className="px-3.5 py-1.5 text-xs font-bold text-slate-400 hover:text-white rounded-none transition-colors"
                         >
                             Cancelar
                         </button>
                         <button
                             type="submit"
                             disabled={saving}
-                            className="flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm active:scale-95 transition-all"
+                            className="flex items-center gap-2 px-4 py-2 text-xs font-heading font-bold text-white bg-amber-600 hover:bg-amber-500 rounded-none uppercase tracking-wider transition-colors shadow-xs"
                         >
                             <Check className="w-4 h-4" />
                             <span>{saving ? 'Cerrando y Actualizando SLA...' : 'Firmar y Finalizar Servicio'}</span>

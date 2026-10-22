@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, User, Mail, Phone, Lock, Loader2, AlertCircle } from 'lucide-react';
 import apiClient from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import afLogo from '../assets/logo-af.png';
 
 export function Setup() {
     const navigate = useNavigate();
@@ -16,7 +17,7 @@ export function Setup() {
         nombre: '',
         apellido: '',
         telefono: '',
-        theme: 'light',
+        theme: 'dark',
         role: 'SUPER_ADMIN'
     });
 
@@ -30,7 +31,6 @@ export function Setup() {
             const data = response.data;
             const token = data.token;
 
-            // Extract metadata from response first, fallback to JWT decoding, then to form data
             const payloadBase64 = token.split('.')[1];
             const payloadJson = atob(payloadBase64.replace(/-/g, '+').replace(/_/g, '/'));
             const payload = JSON.parse(payloadJson);
@@ -39,141 +39,101 @@ export function Setup() {
                 email: data.email || payload.sub || formData.email,
                 role: data.role || payload.role || 'SUPER_ADMIN',
                 name: data.name || data.nombre || payload.name || payload.nombre || formData.nombre,
-                theme: data.theme || payload.theme || 'light'
+                theme: data.theme || payload.theme || 'dark'
             };
 
             login(token, userData);
             navigate('/');
         } catch (err: any) {
             console.error('Setup failed:', err);
-            setError(err.response?.data?.message || 'Failed to create admin user. Please try again.');
+            setError(err.response?.data?.message || 'Error al configurar usuario administrador.');
         } finally {
             setIsLoading(false);
         }
     };
 
     return (
-        <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-4">
-            <div className="max-w-md w-full">
-                <div className="bg-white rounded-[2rem] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.08)] border border-slate-100 overflow-hidden animate-fade-in">
-                    <div className="bg-indigo-600 p-8 text-white text-center relative overflow-hidden">
-                        <div className="relative z-10">
-                            <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl">
-                                <ShieldCheck size={32} className="text-white" />
-                            </div>
-                            <h1 className="text-2xl font-bold tracking-tight">System Setup</h1>
-                            <p className="text-indigo-100 mt-2 opacity-90 text-sm">Create the initial administrator account</p>
-                        </div>
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16 blur-2xl"></div>
-                        <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-400/20 rounded-full translate-y-12 -translate-x-8 blur-xl"></div>
-                    </div>
-
-                    <div className="p-8">
-                        {error && (
-                            <div className="mb-6 p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-sm animate-shake">
-                                <AlertCircle size={18} className="shrink-0" />
-                                <p className="font-medium">{error}</p>
-                            </div>
-                        )}
-
-                        <form onSubmit={handleSubmit} className="space-y-5">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">First Name</label>
-                                    <div className="relative group">
-                                        <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={18} />
-                                        <input
-                                            type="text"
-                                            required
-                                            value={formData.nombre}
-                                            onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                                            className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none text-slate-700 font-medium placeholder:text-slate-400"
-                                            placeholder="John"
-                                        />
-                                    </div>
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Last Name</label>
-                                    <div className="relative group">
-                                        <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={18} />
-                                        <input
-                                            type="text"
-                                            required
-                                            value={formData.apellido}
-                                            onChange={(e) => setFormData({ ...formData, apellido: e.target.value })}
-                                            className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none text-slate-700 font-medium placeholder:text-slate-400"
-                                            placeholder="Doe"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Admin Email</label>
-                                <div className="relative group">
-                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={18} />
-                                    <input
-                                        type="email"
-                                        required
-                                        value={formData.email}
-                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                        className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none text-slate-700 font-medium placeholder:text-slate-400"
-                                        placeholder="admin@afcrm.com"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Phone Number</label>
-                                <div className="relative group">
-                                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={18} />
-                                    <input
-                                        type="tel"
-                                        required
-                                        value={formData.telefono}
-                                        onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
-                                        className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none text-slate-700 font-medium placeholder:text-slate-400"
-                                        placeholder="+54 11 2345-6789"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Secure Password</label>
-                                <div className="relative group">
-                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={18} />
-                                    <input
-                                        type="password"
-                                        required
-                                        value={formData.password}
-                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                        className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none text-slate-700 font-medium placeholder:text-slate-400"
-                                        placeholder="••••••••"
-                                    />
-                                </div>
-                            </div>
-
-                            <button
-                                type="submit"
-                                disabled={isLoading}
-                                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl transition-all shadow-lg shadow-indigo-200 hover:shadow-indigo-300 active:scale-[0.98] flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed mt-4"
-                            >
-                                {isLoading ? (
-                                    <>
-                                        <Loader2 size={20} className="animate-spin" />
-                                        <span>Configuring System...</span>
-                                    </>
-                                ) : (
-                                    <span>Complete Setup</span>
-                                )}
-                            </button>
-                        </form>
-                    </div>
+        <div className="min-h-screen bg-[#141517] flex items-center justify-center p-4">
+            <div className="max-w-md w-full bg-[#1e2022] border border-[#333639] rounded-none shadow-2xl p-6 sm:p-8 animate-fade-in">
+                <div className="text-center pb-4 border-b border-[#333639]">
+                    <img 
+                        src={afLogo} 
+                        alt="AF Construcciones" 
+                        className="h-9 w-auto mx-auto object-contain filter brightness-110 mb-2" 
+                    />
+                    <h1 className="text-lg font-heading font-black text-white uppercase tracking-tight">Inicialización AF-CRM</h1>
+                    <p className="text-xs text-slate-400 font-mono mt-0.5">Creación de cuenta Super Administrador</p>
                 </div>
 
-                <p className="text-center text-slate-400 text-xs mt-8 font-medium">
-                    AF-CRM © 2026 • Advanced Field CRM Solution
-                </p>
+                <form onSubmit={handleSubmit} className="mt-5 space-y-3">
+                    {error && (
+                        <div className="p-2.5 bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
+                            {error}
+                        </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className="block text-[11px] font-mono font-bold text-slate-300 uppercase mb-1">Nombre</label>
+                            <input
+                                type="text"
+                                required
+                                value={formData.nombre}
+                                onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                                className="w-full text-xs p-2.5 rounded-none border border-[#333639] bg-[#141517] text-white outline-none focus:border-amber-500"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-[11px] font-mono font-bold text-slate-300 uppercase mb-1">Apellido</label>
+                            <input
+                                type="text"
+                                required
+                                value={formData.apellido}
+                                onChange={(e) => setFormData({ ...formData, apellido: e.target.value })}
+                                className="w-full text-xs p-2.5 rounded-none border border-[#333639] bg-[#141517] text-white outline-none focus:border-amber-500"
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-[11px] font-mono font-bold text-slate-300 uppercase mb-1">Email</label>
+                        <input
+                            type="email"
+                            required
+                            value={formData.email}
+                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                            className="w-full text-xs p-2.5 rounded-none border border-[#333639] bg-[#141517] text-white outline-none focus:border-amber-500 font-mono"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-[11px] font-mono font-bold text-slate-300 uppercase mb-1">Teléfono</label>
+                        <input
+                            type="text"
+                            value={formData.telefono}
+                            onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
+                            className="w-full text-xs p-2.5 rounded-none border border-[#333639] bg-[#141517] text-white outline-none focus:border-amber-500 font-mono"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-[11px] font-mono font-bold text-slate-300 uppercase mb-1">Contraseña</label>
+                        <input
+                            type="password"
+                            required
+                            value={formData.password}
+                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                            className="w-full text-xs p-2.5 rounded-none border border-[#333639] bg-[#141517] text-white outline-none focus:border-amber-500"
+                        />
+                    </div>
+
+                    <button
+                        type="submit"
+                        disabled={isLoading}
+                        className="w-full py-2.5 mt-2 bg-amber-600 hover:bg-amber-500 text-white font-heading font-bold text-xs uppercase tracking-wider rounded-none transition-colors"
+                    >
+                        {isLoading ? 'Configurando...' : 'Crear Administrador'}
+                    </button>
+                </form>
             </div>
         </div>
     );

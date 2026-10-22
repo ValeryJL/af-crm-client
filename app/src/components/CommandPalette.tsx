@@ -16,7 +16,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
             if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
                 e.preventDefault();
                 if (isOpen) onClose();
-                else onClose(); // parent handles toggle
+                else onClose();
             }
             if (e.key === 'Escape' && isOpen) {
                 onClose();
@@ -29,12 +29,12 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
     if (!isOpen) return null;
 
     const quickActions = [
-        { label: 'Ir al Dashboard de Alertas', icon: HardHat, path: '/' },
-        { label: 'Gestionar Clientes (360°)', icon: Building2, path: '/clients' },
-        { label: 'Ver Servicios & Rutas', icon: Wrench, path: '/services' },
+        { label: 'Ir al Centro de Control SLA', icon: HardHat, path: '/' },
+        { label: 'Gestionar Clientes (Visión 360°)', icon: Building2, path: '/clients' },
+        { label: 'Sedes & Contratos de Servicios', icon: Wrench, path: '/services' },
         { label: 'Órdenes de Trabajo (Kanban)', icon: FileText, path: '/work-orders' },
-        { label: 'Inventario de Equipos & JSONB', icon: Wrench, path: '/equipments' },
-        { label: 'Gestión de Técnicos & Usuarios', icon: HardHat, path: '/users' },
+        { label: 'Parque de Equipos & JSONB', icon: Wrench, path: '/equipments' },
+        { label: 'Técnicos & Usuarios del Sistema', icon: HardHat, path: '/users' },
     ];
 
     const filtered = quickActions.filter(a => a.label.toLowerCase().includes(query.toLowerCase()));
@@ -46,48 +46,48 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
     };
 
     return (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-start justify-center pt-24 px-4 animate-fade-in">
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden">
-                <div className="flex items-center px-4 border-b border-slate-100 dark:border-slate-800">
-                    <Search className="w-5 h-5 text-slate-400" />
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-start justify-center pt-20 px-4 animate-fade-in">
+            <div className="bg-white dark:bg-[#1e2022] border border-slate-300 dark:border-[#333639] rounded-none shadow-2xl w-full max-w-xl overflow-hidden">
+                <div className="flex items-center px-4 border-b border-slate-200 dark:border-[#333639]">
+                    <Search className="w-4 h-4 text-slate-400" />
                     <input
                         type="text"
                         autoFocus
-                        placeholder="Escribe para buscar comandos, clientes, servicios... (ESC para salir)"
+                        placeholder="Buscar comando, cliente, equipo... (ESC para salir)"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
-                        className="w-full px-3 py-4 bg-transparent outline-none text-slate-800 dark:text-slate-100 text-sm placeholder:text-slate-400"
+                        className="w-full px-3 py-3.5 bg-transparent outline-none text-slate-800 dark:text-slate-100 text-xs placeholder:text-slate-400 font-sans"
                     />
-                    <button onClick={onClose} className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+                    <button onClick={onClose} className="p-1 text-slate-400 hover:text-white transition-colors">
                         <X className="w-4 h-4" />
                     </button>
                 </div>
 
                 <div className="p-2 max-h-80 overflow-y-auto space-y-1">
-                    <div className="px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-400">Acciones Rápidas</div>
+                    <div className="px-3 py-1 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">Acciones Rápidas</div>
                     {filtered.map((item, idx) => (
                         <button
                             key={idx}
                             onClick={() => handleSelect(item.path)}
-                            className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-indigo-50 dark:hover:bg-slate-800/80 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors group"
+                            className="w-full flex items-center justify-between px-3 py-2 rounded-none text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#282a2d] hover:text-amber-500 dark:hover:text-amber-400 transition-colors group"
                         >
                             <div className="flex items-center gap-3">
-                                <item.icon className="w-4 h-4 text-slate-400 group-hover:text-indigo-500" />
+                                <item.icon className="w-4 h-4 text-slate-400 group-hover:text-amber-500" />
                                 <span>{item.label}</span>
                             </div>
-                            <ArrowRight className="w-4 h-4 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <ArrowRight className="w-4 h-4 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                         </button>
                     ))}
                     {filtered.length === 0 && (
-                        <div className="p-4 text-center text-sm text-slate-400">
+                        <div className="p-4 text-center text-xs text-slate-400">
                             No se encontraron resultados para "{query}"
                         </div>
                     )}
                 </div>
 
-                <div className="px-4 py-2 bg-slate-50 dark:bg-slate-950/50 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
-                    <span>Navega con flechas o ratón</span>
-                    <span className="font-mono bg-slate-200 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[10px]">Ctrl + K</span>
+                <div className="px-4 py-2 bg-slate-50 dark:bg-[#141517] border-t border-slate-200 dark:border-[#333639] text-[10px] text-slate-400 flex items-center justify-between font-mono">
+                    <span>Navegación por teclado</span>
+                    <span className="bg-slate-200 dark:bg-[#282a2d] px-1.5 py-0.5 rounded-none text-[9px] text-slate-400">Ctrl + K</span>
                 </div>
             </div>
         </div>

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { User, Mail, Phone, Lock, Loader2, AlertCircle, ShieldCheck } from 'lucide-react';
+import { ShieldCheck, User, Mail, Phone, Lock, Loader2, AlertCircle } from 'lucide-react';
 import apiClient from '../api/client.ts';
 import { useAuth } from '../context/AuthContext.tsx';
+import afLogo from '../assets/logo-af.png';
 
 export function RegisterInvited() {
     const navigate = useNavigate();
@@ -24,7 +25,7 @@ export function RegisterInvited() {
 
     useEffect(() => {
         if (!token) {
-            setError('Invitation token is missing. Please use a valid registration link.');
+            setError('Falta el token de invitación. Utiliza un enlace válido provisto por el administrador.');
         }
     }, [token]);
 
@@ -53,7 +54,7 @@ export function RegisterInvited() {
             navigate('/');
         } catch (err: any) {
             console.error('Registration failed:', err);
-            setError(err.response?.data?.message || 'Registration failed. The link might be expired or used.');
+            setError(err.response?.data?.message || 'Error en el registro. El enlace puede haber expirado o ya fue utilizado.');
         } finally {
             setIsLoading(false);
         }
@@ -62,123 +63,87 @@ export function RegisterInvited() {
     if (!token && !error) return null;
 
     return (
-        <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-4">
-            <div className="max-w-md w-full">
-                <div className="bg-white rounded-[2rem] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.08)] border border-slate-100 overflow-hidden animate-fade-in">
-                    <div className="bg-emerald-600 p-8 text-white text-center relative overflow-hidden">
-                        <div className="relative z-10">
-                            <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl">
-                                <ShieldCheck size={32} className="text-white" />
-                            </div>
-                            <h1 className="text-2xl font-bold tracking-tight">Join AF-CRM</h1>
-                            <p className="text-emerald-100 mt-2 opacity-90 text-sm">Complete your profile to get started</p>
-                        </div>
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16 blur-2xl"></div>
-                    </div>
-
-                    <div className="p-8">
-                        {error && (
-                            <div className="mb-6 p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-sm">
-                                <AlertCircle size={18} className="shrink-0" />
-                                <p className="font-medium">{error}</p>
-                            </div>
-                        )}
-
-                        {!error && (
-                            <form onSubmit={handleSubmit} className="space-y-5">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1.5">
-                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">First Name</label>
-                                        <div className="relative group">
-                                            <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-600 transition-colors" size={18} />
-                                            <input
-                                                type="text"
-                                                required
-                                                value={formData.nombre}
-                                                onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                                                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none text-slate-700 font-medium placeholder:text-slate-400"
-                                                placeholder="Your name"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Last Name</label>
-                                        <div className="relative group">
-                                            <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-600 transition-colors" size={18} />
-                                            <input
-                                                type="text"
-                                                required
-                                                value={formData.apellido}
-                                                onChange={(e) => setFormData({ ...formData, apellido: e.target.value })}
-                                                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none text-slate-700 font-medium placeholder:text-slate-400"
-                                                placeholder="Surname"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Email Address</label>
-                                    <div className="relative group">
-                                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-600 transition-colors" size={18} />
-                                        <input
-                                            type="email"
-                                            required
-                                            value={formData.email}
-                                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                            className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none text-slate-700 font-medium placeholder:text-slate-400"
-                                            placeholder="you@example.com"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Phone Number</label>
-                                    <div className="relative group">
-                                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-600 transition-colors" size={18} />
-                                        <input
-                                            type="tel"
-                                            value={formData.telefono}
-                                            onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
-                                            className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none text-slate-700 font-medium placeholder:text-slate-400"
-                                            placeholder="+54..."
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Choose Password</label>
-                                    <div className="relative group">
-                                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-600 transition-colors" size={18} />
-                                        <input
-                                            type="password"
-                                            required
-                                            value={formData.password}
-                                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                            className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none text-slate-700 font-medium placeholder:text-slate-400"
-                                            placeholder="••••••••"
-                                        />
-                                    </div>
-                                </div>
-
-                                <button
-                                    type="submit"
-                                    disabled={isLoading}
-                                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-2xl transition-all shadow-lg shadow-emerald-200 hover:shadow-emerald-300 active:scale-[0.98] flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed mt-4"
-                                >
-                                    {isLoading ? (
-                                        <>
-                                            <Loader2 size={20} className="animate-spin" />
-                                            <span>Creating Account...</span>
-                                        </>
-                                    ) : (
-                                        <span>Join Now</span>
-                                    )}
-                                </button>
-                            </form>
-                        )}
-                    </div>
+        <div className="min-h-screen bg-[#141517] flex items-center justify-center p-4">
+            <div className="max-w-md w-full bg-[#1e2022] border border-[#333639] rounded-none shadow-2xl p-6 sm:p-8 animate-fade-in">
+                <div className="text-center pb-4 border-b border-[#333639]">
+                    <img 
+                        src={afLogo} 
+                        alt="AF Construcciones" 
+                        className="h-9 w-auto mx-auto object-contain filter brightness-110 mb-2" 
+                    />
+                    <h1 className="text-lg font-heading font-black text-white uppercase tracking-tight">Registro de Usuario</h1>
+                    <p className="text-xs text-slate-400 font-mono mt-0.5">Completa tu perfil para acceder al sistema</p>
                 </div>
+
+                <form onSubmit={handleSubmit} className="mt-5 space-y-3">
+                    {error && (
+                        <div className="p-2.5 bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
+                            {error}
+                        </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className="block text-[11px] font-mono font-bold text-slate-300 uppercase mb-1">Nombre</label>
+                            <input
+                                type="text"
+                                required
+                                value={formData.nombre}
+                                onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                                className="w-full text-xs p-2.5 rounded-none border border-[#333639] bg-[#141517] text-white outline-none focus:border-amber-500"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-[11px] font-mono font-bold text-slate-300 uppercase mb-1">Apellido</label>
+                            <input
+                                type="text"
+                                required
+                                value={formData.apellido}
+                                onChange={(e) => setFormData({ ...formData, apellido: e.target.value })}
+                                className="w-full text-xs p-2.5 rounded-none border border-[#333639] bg-[#141517] text-white outline-none focus:border-amber-500"
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-[11px] font-mono font-bold text-slate-300 uppercase mb-1">Email</label>
+                        <input
+                            type="email"
+                            required
+                            value={formData.email}
+                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                            className="w-full text-xs p-2.5 rounded-none border border-[#333639] bg-[#141517] text-white outline-none focus:border-amber-500 font-mono"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-[11px] font-mono font-bold text-slate-300 uppercase mb-1">Teléfono</label>
+                        <input
+                            type="text"
+                            value={formData.telefono}
+                            onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
+                            className="w-full text-xs p-2.5 rounded-none border border-[#333639] bg-[#141517] text-white outline-none focus:border-amber-500 font-mono"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-[11px] font-mono font-bold text-slate-300 uppercase mb-1">Contraseña</label>
+                        <input
+                            type="password"
+                            required
+                            value={formData.password}
+                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                            className="w-full text-xs p-2.5 rounded-none border border-[#333639] bg-[#141517] text-white outline-none focus:border-amber-500"
+                        />
+                    </div>
+
+                    <button
+                        type="submit"
+                        disabled={isLoading}
+                        className="w-full py-2.5 mt-2 bg-amber-600 hover:bg-amber-500 text-white font-heading font-bold text-xs uppercase tracking-wider rounded-none transition-colors"
+                    >
+                        {isLoading ? 'Registrando...' : 'Finalizar Registro'}
+                    </button>
+                </form>
             </div>
         </div>
     );
