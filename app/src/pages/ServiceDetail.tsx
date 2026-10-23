@@ -195,7 +195,11 @@ export function ServiceDetail() {
                 <div className="bg-white dark:bg-[#1e2022] p-4 rounded-none border border-slate-300 dark:border-[#333639] shadow-xs">
                     <span className="text-[10px] font-mono font-bold uppercase text-slate-400 block tracking-wider">Estado SLA Preventivo</span>
                     <span className="text-lg font-heading font-bold text-slate-800 dark:text-slate-100 mt-1 block font-mono">
-                        {service.fechaProximaVisitaLimite || 'Calculando'}
+                        {service.frecuenciaVisita === 'A_DEMANDA' 
+                            ? 'A Demanda' 
+                            : service.fechaProximaVisitaLimite 
+                                ? new Date(service.fechaProximaVisitaLimite + 'T00:00:00').toLocaleDateString('es-AR')
+                                : 'Sin programar'}
                     </span>
                     <span className="text-[10px] text-amber-500 font-mono mt-0.5 block font-bold">Fecha límite sugerida</span>
                 </div>

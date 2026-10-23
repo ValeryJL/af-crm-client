@@ -211,18 +211,49 @@ export function Services() {
                                                 </span>
                                             </td>
                                             <td className="px-5 py-3.5 text-center">
-                                                <span className={`inline-flex items-center px-2 py-0.5 rounded-none text-[10px] font-mono font-black border uppercase tracking-wider ${
-                                                    isOverdue 
-                                                        ? 'bg-rose-500/10 text-rose-500 border-rose-500/30' 
-                                                        : isUpcoming
-                                                            ? 'bg-amber-500/10 text-amber-500 border-amber-500/30'
-                                                            : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                                                }`}>
-                                                    {isOverdue ? 'Vencida' : isUpcoming ? 'Próxima' : 'Al Día'}
-                                                </span>
+                                                {service.frecuenciaVisita === 'A_DEMANDA' ? (
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-none text-[10px] font-mono font-bold bg-slate-100 dark:bg-[#141517] text-slate-500 border border-slate-300 dark:border-[#333639]">
+                                                        A Demanda
+                                                    </span>
+                                                ) : (
+                                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-none text-[10px] font-mono font-black border uppercase tracking-wider ${
+                                                        isOverdue 
+                                                            ? 'bg-rose-500/10 text-rose-500 border-rose-500/30' 
+                                                            : isUpcoming
+                                                                ? 'bg-amber-500/10 text-amber-500 border-amber-500/30'
+                                                                : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                                                    }`}>
+                                                        {isOverdue ? 'Vencida' : isUpcoming ? 'Próxima' : 'Al Día'}
+                                                    </span>
+                                                )}
                                             </td>
-                                            <td className="px-5 py-3.5 font-mono text-slate-500 text-xs">
-                                                {service.fechaProximaVisitaLimite || 'Calculando...'}
+                                            <td className="px-5 py-3.5 font-mono text-xs">
+                                                {service.frecuenciaVisita === 'A_DEMANDA' ? (
+                                                    <span className="text-slate-500 text-[11px]">—</span>
+                                                ) : service.fechaProximaVisitaLimite ? (
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="text-slate-800 dark:text-slate-200 font-bold">
+                                                            {new Date(service.fechaProximaVisitaLimite + 'T00:00:00').toLocaleDateString('es-AR')}
+                                                        </span>
+                                                        {service.diasParaVisita !== undefined && service.diasParaVisita !== null && (
+                                                            <span className={`text-[10px] ${
+                                                                service.diasParaVisita < 0 
+                                                                    ? 'text-rose-500 font-bold' 
+                                                                    : service.diasParaVisita <= (service.diasAvisoAlerta || 7) 
+                                                                        ? 'text-amber-500 font-bold' 
+                                                                        : 'text-slate-400'
+                                                            }`}>
+                                                                ({service.diasParaVisita < 0 
+                                                                    ? `${Math.abs(service.diasParaVisita)}d venc.` 
+                                                                    : service.diasParaVisita === 0 
+                                                                        ? 'hoy' 
+                                                                        : `en ${service.diasParaVisita}d`})
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-slate-400 text-[11px] italic">Sin programar</span>
+                                                )}
                                             </td>
                                             <td className="px-5 py-3.5 text-right">
                                                 <div className="flex items-center justify-end gap-1.5">

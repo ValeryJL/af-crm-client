@@ -235,7 +235,13 @@ export function ClientDetail() {
                                         Última visita: <span className="text-slate-700 dark:text-slate-300 font-bold">{srv.fechaUltimaVisita || 'N/A'}</span>
                                     </div>
                                     <div className="text-slate-500 text-right">
-                                        Próx. límite: <span className="text-amber-500 font-bold">{srv.fechaProximaVisitaLimite || 'Calculando'}</span>
+                                        Próx. límite: <span className="text-amber-500 font-bold">
+                                            {srv.frecuenciaVisita === 'A_DEMANDA' 
+                                                ? 'A Demanda' 
+                                                : srv.fechaProximaVisitaLimite 
+                                                    ? new Date(srv.fechaProximaVisitaLimite + 'T00:00:00').toLocaleDateString('es-AR')
+                                                    : 'Sin programar'}
+                                        </span>
                                     </div>
                                 </div>
                             </div>

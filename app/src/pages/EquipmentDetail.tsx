@@ -147,7 +147,9 @@ export function EquipmentDetail() {
                         {equipment.intervaloHorasRegular ? ` (${equipment.intervaloHorasRegular} hs)` : ''}
                     </span>
                     <span className="text-[10px] text-slate-400 font-mono mt-1 block">
-                        Próx: {equipment.fechaProximaVisitaRegular || 'Calculando'}
+                        Próx: {equipment.fechaProximaVisitaRegular 
+                            ? new Date(equipment.fechaProximaVisitaRegular + 'T00:00:00').toLocaleDateString('es-AR')
+                            : 'Sin programar'}
                     </span>
                 </div>
                 <div className="bg-white dark:bg-[#1e2022] p-4 rounded-none border border-slate-300 dark:border-[#333639] shadow-xs">
