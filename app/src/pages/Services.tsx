@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { crmApi } from '../api/crm';
 import type { ServiceDto, ClientDto } from '../api/crm';
-import { Wrench, MapPin, Search, ArrowUpRight, Plus, X, AlertCircle } from 'lucide-react';
+import { Wrench, MapPin, Search, ArrowUpRight, Plus, X, AlertCircle, Edit3 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export function Services() {
@@ -9,7 +9,8 @@ export function Services() {
     const [clients, setClients] = useState<ClientDto[]>([]);
     const [loading, setLoading] = useState(true);
     const [query, setQuery] = useState('');
-    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [showModal, setShowModal] = useState(false);
+    const [editingService, setEditingService] = useState<ServiceDto | null>(null);
     const [saving, setSaving] = useState(false);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -49,28 +50,56 @@ export function Services() {
         }
     };
 
-    const handleCreateService = async (e: React.FormEvent) => {
+    const handleOpenCreate = () => {
+        setEditingService(null);
+        setErrorMsg(null);
+        setForm({
+            nombre: '',
+            direccionFisica: '',
+            localidad: 'La Plata',
+            provincia: 'Buenos Aires',
+            frecuenciaVisita: 'MENSUAL',
+            diasAvisoAlerta: 7,
+            clientId: clients[0]?.id,
+            notas: ''
+        });
+        setShowModal(true);
+    };
+
+    const handleOpenEdit = (service: ServiceDto, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setEditingService(service);
+        setErrorMsg(null);
+        setForm({
+            nombre: service.nombre || '',
+            direccionFisica: service.direccionFisica || '',
+            localidad: service.localidad || 'La Plata',
+            provincia: service.provincia || 'Buenos Aires',
+            frecuenciaVisita: service.frecuenciaVisita || 'MENSUAL',
+            diasAvisoAlerta: service.diasAvisoAlerta || 7,
+            clientId: service.clientId,
+            notas: service.notas || ''
+        });
+        setShowModal(true);
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!form.clientId || !form.nombre || !form.direccionFisica) return;
         setErrorMsg(null);
 
         try {
             setSaving(true);
-            await crmApi.createService(form as ServiceDto);
-            setShowCreateModal(false);
-            setForm({
-                nombre: '',
-                direccionFisica: '',
-                localidad: '',
-                provincia: '',
-                frecuenciaVisita: 'MENSUAL',
-                diasAvisoAlerta: 7,
-                clientId: clients[0]?.id,
-                notas: ''
-            });
+            if (editingService && editingService.id) {
+                await crmApi.updateService(editingService.id, form as ServiceDto);
+            } else {
+                await crmApi.createService(form as ServiceDto);
+            }
+            setShowModal(false);
+            setEditingService(null);
             loadData();
         } catch (e: any) {
-            console.error('Error creating service:', e);
+            console.error('Error saving service:', e);
             setErrorMsg(e.response?.data?.message || e.message || 'Error al guardar la sede');
         } finally {
             setSaving(false);
@@ -100,10 +129,7 @@ export function Services() {
                 </div>
 
                 <button
-                    onClick={() => {
-                        setErrorMsg(null);
-                        setShowCreateModal(true);
-                    }}
+                    onClick={handleOpenCreate}
                     className="flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-none font-heading font-bold text-xs uppercase tracking-wider transition-colors shadow-xs self-start sm:self-auto"
                 >
                     <Plus className="w-3.5 h-3.5" />
@@ -116,7 +142,7 @@ export function Services() {
                 <Search className="w-4 h-4 text-slate-400 ml-1" />
                 <input
                     type="text"
-                    placeholder="Buscar sede por nombre, cliente o dirección física..."
+                    placeholder="Buscar sede, dirección o cliente..."
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     className="w-full bg-transparent text-xs text-slate-800 dark:text-slate-100 outline-none placeholder:text-slate-400 font-sans"
@@ -137,7 +163,7 @@ export function Services() {
                         </h3>
                         <p className="text-xs text-slate-400 mt-1">Crea una sede física vinculada a un cliente para comenzar a operar.</p>
                         <button
-                            onClick={() => setShowCreateModal(true)}
+                            onClick={handleOpenCreate}
                             className="mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs uppercase tracking-wider rounded-none"
                         >
                             <Plus className="w-3.5 h-3.5" />
@@ -154,7 +180,7 @@ export function Services() {
                                     <th className="px-5 py-3 text-center">Frecuencia Base</th>
                                     <th className="px-5 py-3 text-center">Estado SLA</th>
                                     <th className="px-5 py-3">Próx. Visita Límite</th>
-                                    <th className="px-5 py-3 text-right">Acción</th>
+                                    <th className="px-5 py-3 text-right">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-200 dark:divide-[#333639]">
@@ -185,25 +211,35 @@ export function Services() {
                                                 </span>
                                             </td>
                                             <td className="px-5 py-3.5 text-center">
-                                                <span className={`text-[10px] font-mono font-black uppercase px-2 py-0.5 rounded-none border ${
+                                                <span className={`inline-flex items-center px-2 py-0.5 rounded-none text-[10px] font-mono font-black border uppercase tracking-wider ${
                                                     isOverdue 
-                                                        ? 'bg-rose-500/20 text-rose-400 border-rose-500/30' 
-                                                        : isUpcoming 
-                                                            ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' 
-                                                            : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                                                        ? 'bg-rose-500/10 text-rose-500 border-rose-500/30' 
+                                                        : isUpcoming
+                                                            ? 'bg-amber-500/10 text-amber-500 border-amber-500/30'
+                                                            : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
                                                 }`}>
-                                                    {service.slaStatus}
+                                                    {isOverdue ? 'Vencida' : isUpcoming ? 'Próxima' : 'Al Día'}
                                                 </span>
                                             </td>
-                                            <td className="px-5 py-3.5 font-mono text-xs">
-                                                <span className={isOverdue ? 'text-rose-500 font-bold' : 'text-slate-600 dark:text-slate-300'}>
-                                                    {service.fechaProximaVisitaLimite || 'No agendada'}
-                                                </span>
+                                            <td className="px-5 py-3.5 font-mono text-slate-500 text-xs">
+                                                {service.fechaProximaVisitaLimite || 'Calculando...'}
                                             </td>
                                             <td className="px-5 py-3.5 text-right">
-                                                <button className="p-1.5 text-slate-400 hover:text-amber-500 transition-colors">
-                                                    <ArrowUpRight className="w-4 h-4" />
-                                                </button>
+                                                <div className="flex items-center justify-end gap-1.5">
+                                                    <button
+                                                        onClick={(e) => handleOpenEdit(service, e)}
+                                                        className="p-1.5 text-slate-400 hover:text-amber-500 hover:bg-slate-200 dark:hover:bg-[#282a2d] transition-colors"
+                                                        title="Editar Sede"
+                                                    >
+                                                        <Edit3 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                    <button 
+                                                        className="p-1.5 text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                                                        title="Ver Detalle Sede"
+                                                    >
+                                                        <ArrowUpRight className="w-4 h-4" />
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     );
@@ -214,34 +250,41 @@ export function Services() {
                 )}
             </div>
 
-            {/* Modal Crear Sede / Servicio */}
-            {showCreateModal && (
-                <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-                    <div className="bg-white dark:bg-[#1e2022] border border-slate-300 dark:border-[#333639] rounded-none max-w-lg w-full p-5 shadow-2xl">
-                        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-[#333639]">
-                            <h3 className="text-sm font-heading font-black text-slate-800 dark:text-slate-100 uppercase tracking-wide">
-                                Crear Nueva Sede / Planta de Cliente
-                            </h3>
-                            <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-white">
+            {/* Modal Crear / Editar Sede */}
+            {showModal && (
+                <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 flex items-center justify-center p-4 animate-fade-in">
+                    <div className="bg-white dark:bg-[#1e2022] border border-slate-300 dark:border-[#333639] w-full max-w-lg shadow-2xl p-6 relative">
+                        <div className="flex items-center justify-between pb-3 border-b border-slate-300 dark:border-[#333639] mb-4">
+                            <div>
+                                <h2 className="text-sm font-heading font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight">
+                                    {editingService ? 'Editar Sede / Contrato' : 'Nueva Sede / Contrato de Servicio'}
+                                </h2>
+                                <p className="text-[11px] text-slate-400">
+                                    {editingService ? 'Modifica los parámetros operativos de la instalación' : 'Registra una instalación física de un cliente'}
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setShowModal(false)}
+                                className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                            >
                                 <X className="w-4 h-4" />
                             </button>
                         </div>
-                        <form onSubmit={handleCreateService} className="mt-4 space-y-3">
+
+                        <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
                                 <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
-                                    Cliente Propietario *
+                                    Empresa Cliente *
                                 </label>
                                 <select
                                     required
                                     value={form.clientId || ''}
                                     onChange={(e) => setForm({ ...form, clientId: parseInt(e.target.value) })}
-                                    className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500 font-mono"
+                                    className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500 font-bold"
                                 >
                                     <option value="" disabled>Selecciona un cliente</option>
-                                    {clients.map((c) => (
-                                        <option key={c.id} value={c.id}>
-                                            {c.razonSocial} (CUIT: {c.cuitRut || 'S/D'})
-                                        </option>
+                                    {clients.map(c => (
+                                        <option key={c.id} value={c.id}>{c.razonSocial}</option>
                                     ))}
                                 </select>
                             </div>
@@ -253,22 +296,22 @@ export function Services() {
                                 <input
                                     type="text"
                                     required
-                                    placeholder="Ej: Planta Zárate - Depósito Logístico"
-                                    value={form.nombre || ''}
+                                    placeholder="ej. Planta Morón Centro / Edificio Moreno"
+                                    value={form.nombre}
                                     onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-                                    className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500"
+                                    className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500 font-bold"
                                 />
                             </div>
 
                             <div>
                                 <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
-                                    Dirección Física de la Planta *
+                                    Dirección Física *
                                 </label>
                                 <input
                                     type="text"
                                     required
-                                    placeholder="Ej: Ruta 9 Km 88, Zárate"
-                                    value={form.direccionFisica || ''}
+                                    placeholder="ej. Av. Rivadavia 12345"
+                                    value={form.direccionFisica}
                                     onChange={(e) => setForm({ ...form, direccionFisica: e.target.value })}
                                     className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500"
                                 />
@@ -279,7 +322,7 @@ export function Services() {
                                     <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">Localidad</label>
                                     <input
                                         type="text"
-                                        placeholder="Zárate"
+                                        placeholder="La Plata"
                                         value={form.localidad || ''}
                                         onChange={(e) => setForm({ ...form, localidad: e.target.value })}
                                         className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500"
@@ -337,7 +380,7 @@ export function Services() {
                             <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-200 dark:border-[#333639]">
                                 <button
                                     type="button"
-                                    onClick={() => setShowCreateModal(false)}
+                                    onClick={() => setShowModal(false)}
                                     className="px-3.5 py-1.5 text-xs font-bold text-slate-400 hover:text-white rounded-none transition-colors"
                                 >
                                     Cancelar
@@ -347,7 +390,7 @@ export function Services() {
                                     disabled={saving}
                                     className="px-4 py-1.5 text-xs font-heading font-bold text-white bg-amber-600 hover:bg-amber-500 rounded-none shadow-xs uppercase tracking-wider transition-colors disabled:opacity-50"
                                 >
-                                    {saving ? 'Guardando...' : 'Crear Sede'}
+                                    {saving ? 'Guardando...' : editingService ? 'Guardar Cambios' : 'Crear Sede'}
                                 </button>
                             </div>
                         </form>

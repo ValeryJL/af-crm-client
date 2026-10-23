@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { crmApi } from '../api/crm';
 import type { ClientDto } from '../api/crm';
-import { Building2, Plus, Search, Phone, Mail, ArrowUpRight, X, Check, AlertCircle } from 'lucide-react';
+import { Building2, Plus, Search, Phone, ArrowUpRight, X, Check, AlertCircle, Edit3 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export function Clients() {
@@ -9,6 +9,7 @@ export function Clients() {
     const [loading, setLoading] = useState(true);
     const [query, setQuery] = useState('');
     const [drawerOpen, setDrawerOpen] = useState(false);
+    const [editingClient, setEditingClient] = useState<ClientDto | null>(null);
     const [saving, setSaving] = useState(false);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [formData, setFormData] = useState<Partial<ClientDto>>({
@@ -39,28 +40,56 @@ export function Clients() {
         }
     };
 
-    const handleCreateClient = async (e: React.FormEvent) => {
+    const handleOpenCreate = () => {
+        setEditingClient(null);
+        setErrorMsg(null);
+        setFormData({
+            razonSocial: '',
+            cuitRut: '',
+            condicionFiscal: 'Responsable Inscripto',
+            direccionFiscal: '',
+            telefonoGeneral: '',
+            emailComercial: '',
+            notas: '',
+            activo: true
+        });
+        setDrawerOpen(true);
+    };
+
+    const handleOpenEdit = (client: ClientDto, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setEditingClient(client);
+        setErrorMsg(null);
+        setFormData({
+            razonSocial: client.razonSocial || '',
+            cuitRut: client.cuitRut || '',
+            condicionFiscal: client.condicionFiscal || 'Responsable Inscripto',
+            direccionFiscal: client.direccionFiscal || '',
+            telefonoGeneral: client.telefonoGeneral || '',
+            emailComercial: client.emailComercial || '',
+            notas: client.notas || '',
+            activo: client.activo ?? true
+        });
+        setDrawerOpen(true);
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!formData.razonSocial) return;
         setErrorMsg(null);
 
         try {
             setSaving(true);
-            await crmApi.createClient(formData as ClientDto);
+            if (editingClient && editingClient.id) {
+                await crmApi.updateClient(editingClient.id, formData as ClientDto);
+            } else {
+                await crmApi.createClient(formData as ClientDto);
+            }
             setDrawerOpen(false);
-            setFormData({
-                razonSocial: '',
-                cuitRut: '',
-                condicionFiscal: 'Responsable Inscripto',
-                direccionFiscal: '',
-                telefonoGeneral: '',
-                emailComercial: '',
-                notas: '',
-                activo: true
-            });
+            setEditingClient(null);
             fetchClients();
         } catch (e: any) {
-            console.error('Error creating client:', e);
+            console.error('Error saving client:', e);
             setErrorMsg(e.response?.data?.message || e.message || 'Error al guardar el cliente');
         } finally {
             setSaving(false);
@@ -85,7 +114,7 @@ export function Clients() {
                     </p>
                 </div>
                 <button
-                    onClick={() => setDrawerOpen(true)}
+                    onClick={handleOpenCreate}
                     className="flex items-center gap-2 px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-none font-bold text-xs shadow-2xs transition-all self-start sm:self-auto"
                 >
                     <Plus className="w-3.5 h-3.5" />
@@ -112,8 +141,15 @@ export function Clients() {
                 ) : filtered.length === 0 ? (
                     <div className="py-12 text-center">
                         <Building2 className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                        <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase">Sin Clientes Registrados</h3>
-                        <p className="text-[11px] text-slate-400 mt-0.5">Comienza dando de alta una empresa para asignar sedes y maquinaria.</p>
+                        <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase">Sin clientes registrados</h3>
+                        <p className="text-[11px] text-slate-400 mt-1">Comienza dando de alta una empresa para asignar sedes y maquinaria.</p>
+                        <button
+                            onClick={handleOpenCreate}
+                            className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-none font-bold text-xs shadow-2xs"
+                        >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Crear Primer Cliente</span>
+                        </button>
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
@@ -124,7 +160,7 @@ export function Clients() {
                                     <th className="px-4 py-2.5">Fiscal / Contacto</th>
                                     <th className="px-4 py-2.5">Sedes</th>
                                     <th className="px-4 py-2.5">Equipos</th>
-                                    <th className="px-4 py-2.5 text-right">Acción</th>
+                                    <th className="px-4 py-2.5 text-right">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-200 dark:divide-[#2a2c2e]">
@@ -158,9 +194,21 @@ export function Clients() {
                                             </span>
                                         </td>
                                         <td className="px-4 py-3 text-right">
-                                            <button className="p-1 text-slate-400 hover:text-slate-900 dark:hover:text-white">
-                                                <ArrowUpRight className="w-4 h-4" />
-                                            </button>
+                                            <div className="flex items-center justify-end gap-1.5">
+                                                <button
+                                                    onClick={(e) => handleOpenEdit(client, e)}
+                                                    className="p-1.5 text-slate-400 hover:text-amber-500 hover:bg-slate-200 dark:hover:bg-[#282a2d] transition-colors"
+                                                    title="Editar Cliente"
+                                                >
+                                                    <Edit3 className="w-3.5 h-3.5" />
+                                                </button>
+                                                <button 
+                                                    className="p-1.5 text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                                                    title="Ver Sede 360"
+                                                >
+                                                    <ArrowUpRight className="w-4 h-4" />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -170,7 +218,7 @@ export function Clients() {
                 )}
             </div>
 
-            {/* Slide-over Drawer for Client Creation */}
+            {/* Slide-over Drawer for Client Creation & Edition */}
             {drawerOpen && (
                 <div className="fixed inset-0 z-50 overflow-hidden animate-fade-in">
                     <div 
@@ -178,29 +226,36 @@ export function Clients() {
                         onClick={() => setDrawerOpen(false)}
                     />
                     <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
-                        <div className="w-screen max-w-md bg-white dark:bg-[#1e2022] shadow-2xl flex flex-col border-l border-slate-300 dark:border-[#333639]">
-                            <div className="p-4 border-b border-slate-300 dark:border-[#333639] bg-[#2d3033] text-white flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <Building2 className="w-4 h-4 text-amber-400" />
-                                    <h2 className="text-sm font-heading font-black uppercase text-white">Nuevo Cliente B2B</h2>
+                        <div className="w-screen max-w-md bg-white dark:bg-[#1e2022] border-l border-slate-300 dark:border-[#333639] shadow-2xl p-6 flex flex-col justify-between">
+                            <div className="flex items-center justify-between pb-4 border-b border-slate-300 dark:border-[#333639]">
+                                <div>
+                                    <h2 className="text-sm font-heading font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight">
+                                        {editingClient ? 'Editar Cliente Industrial' : 'Alta de Cliente Industrial'}
+                                    </h2>
+                                    <p className="text-[11px] text-slate-400">
+                                        {editingClient ? 'Modifica los datos comerciales y de facturación' : 'Registra la razón social para vincular sedes y maquinaria'}
+                                    </p>
                                 </div>
-                                <button onClick={() => setDrawerOpen(false)} className="p-1 text-slate-300 hover:text-white rounded-none">
+                                <button
+                                    onClick={() => setDrawerOpen(false)}
+                                    className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                                >
                                     <X className="w-4 h-4" />
                                 </button>
                             </div>
 
-                            <form onSubmit={handleCreateClient} className="p-4 space-y-3.5 flex-1 overflow-y-auto">
+                            <form onSubmit={handleSubmit} className="space-y-4 my-auto py-4 overflow-y-auto">
                                 <div>
                                     <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                                        Razón Social *
+                                        Razón Social / Nombre Comercial *
                                     </label>
                                     <input
                                         type="text"
                                         required
-                                        placeholder="Ej: Cervecería Quilmes S.A."
+                                        placeholder="ej. Frigorífico Morón S.A."
                                         value={formData.razonSocial}
                                         onChange={(e) => setFormData({ ...formData, razonSocial: e.target.value })}
-                                        className="w-full text-xs p-2 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-900 dark:text-slate-100 outline-none focus:border-amber-500"
+                                        className="w-full text-xs p-2 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-900 dark:text-slate-100 outline-none focus:border-amber-500 font-bold"
                                     />
                                 </div>
 
@@ -211,10 +266,10 @@ export function Clients() {
                                         </label>
                                         <input
                                             type="text"
-                                            placeholder="30-12345678-9"
+                                            placeholder="30-71123456-4"
                                             value={formData.cuitRut}
                                             onChange={(e) => setFormData({ ...formData, cuitRut: e.target.value })}
-                                            className="w-full text-xs p-2 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-900 dark:text-slate-100 outline-none focus:border-amber-500"
+                                            className="w-full text-xs p-2 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-900 dark:text-slate-100 outline-none focus:border-amber-500 font-mono"
                                         />
                                     </div>
                                     <div>
@@ -229,6 +284,7 @@ export function Clients() {
                                             <option value="Responsable Inscripto">Resp. Inscripto</option>
                                             <option value="Monotributo">Monotributo</option>
                                             <option value="Exento">Exento</option>
+                                            <option value="Consumidor Final">Cons. Final</option>
                                         </select>
                                     </div>
                                 </div>
@@ -239,7 +295,7 @@ export function Clients() {
                                     </label>
                                     <input
                                         type="text"
-                                        placeholder="Av. 12 de Octubre 100, Quilmes"
+                                        placeholder="Av. Industrial 4500, Munro"
                                         value={formData.direccionFiscal}
                                         onChange={(e) => setFormData({ ...formData, direccionFiscal: e.target.value })}
                                         className="w-full text-xs p-2 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-900 dark:text-slate-100 outline-none focus:border-amber-500"
@@ -307,7 +363,7 @@ export function Clients() {
                                         className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold text-white bg-amber-600 hover:bg-amber-500 rounded-none shadow-2xs"
                                     >
                                         <Check className="w-3.5 h-3.5" />
-                                        <span>{saving ? 'Guardando...' : 'Crear Cliente'}</span>
+                                        <span>{saving ? 'Guardando...' : editingClient ? 'Guardar Cambios' : 'Crear Cliente'}</span>
                                     </button>
                                 </div>
                             </form>

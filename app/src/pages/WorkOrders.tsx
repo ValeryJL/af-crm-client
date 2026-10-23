@@ -3,21 +3,25 @@ import { crmApi } from '../api/crm';
 import type { WorkOrderDto, ServiceDto } from '../api/crm';
 import { 
     FileText, Plus, CheckCircle2, Clock, Play, Check, 
-    ArrowUpRight, AlertTriangle, UserCheck, Calendar, Filter, Kanban, Table as TableIcon, X
+    ArrowUpRight, AlertTriangle, UserCheck, Calendar, Filter, Kanban, Table as TableIcon, X, Edit3
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export function WorkOrders() {
     const [orders, setOrders] = useState<WorkOrderDto[]>([]);
     const [services, setServices] = useState<ServiceDto[]>([]);
+    const [technicians, setTechnicians] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState<'KANBAN' | 'TABLE'>('KANBAN');
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const [editingOrder, setEditingOrder] = useState<WorkOrderDto | null>(null);
     const [orderForm, setOrderForm] = useState<Partial<WorkOrderDto>>({
         serviceId: undefined,
         tipo: 'PREVENTIVO',
+        estado: 'PENDIENTE',
         descripcion: '',
-        fechaProgramada: new Date().toISOString().split('T')[0]
+        fechaProgramada: new Date().toISOString().split('T')[0],
+        tecnicoId: undefined
     });
     const navigate = useNavigate();
 
@@ -28,12 +32,14 @@ export function WorkOrders() {
     const loadData = async () => {
         try {
             setLoading(true);
-            const [woRes, servRes] = await Promise.all([
+            const [woRes, servRes, techRes] = await Promise.all([
                 crmApi.getWorkOrders(),
-                crmApi.getServices()
+                crmApi.getServices(),
+                crmApi.getUsers().catch(() => ({ data: [] }))
             ]);
             setOrders(woRes.data);
             setServices(servRes.data);
+            setTechnicians(techRes.data || []);
         } catch (e) {
             console.error('Error loading work orders:', e);
         } finally {
@@ -41,22 +47,47 @@ export function WorkOrders() {
         }
     };
 
-    const handleCreateOrder = async (e: React.FormEvent) => {
+    const handleOpenCreate = () => {
+        setEditingOrder(null);
+        setOrderForm({
+            serviceId: services.length > 0 ? services[0].id : undefined,
+            tipo: 'PREVENTIVO',
+            estado: 'PENDIENTE',
+            descripcion: '',
+            fechaProgramada: new Date().toISOString().split('T')[0],
+            tecnicoId: undefined
+        });
+        setShowCreateModal(true);
+    };
+
+    const handleOpenEdit = (wo: WorkOrderDto) => {
+        setEditingOrder(wo);
+        setOrderForm({
+            serviceId: wo.serviceId,
+            tipo: wo.tipo,
+            estado: wo.estado,
+            descripcion: wo.descripcion || '',
+            fechaProgramada: wo.fechaProgramada ? wo.fechaProgramada.split('T')[0] : '',
+            tecnicoId: wo.tecnicoId
+        });
+        setShowCreateModal(true);
+    };
+
+    const handleSaveOrder = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!orderForm.serviceId || !orderForm.descripcion) return;
 
         try {
-            await crmApi.createWorkOrder(orderForm as WorkOrderDto);
+            if (editingOrder && editingOrder.id) {
+                await crmApi.updateWorkOrder(editingOrder.id, orderForm);
+            } else {
+                await crmApi.createWorkOrder(orderForm as WorkOrderDto);
+            }
             setShowCreateModal(false);
-            setOrderForm({
-                serviceId: undefined,
-                tipo: 'PREVENTIVO',
-                descripcion: '',
-                fechaProgramada: new Date().toISOString().split('T')[0]
-            });
+            setEditingOrder(null);
             loadData();
         } catch (e) {
-            console.error('Error creating work order:', e);
+            console.error('Error saving work order:', e);
         }
     };
 
@@ -127,7 +158,7 @@ export function WorkOrders() {
                     </div>
 
                     <button
-                        onClick={() => setShowCreateModal(true)}
+                        onClick={handleOpenCreate}
                         className="flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-none font-heading font-bold text-xs uppercase tracking-wider transition-colors shadow-xs"
                     >
                         <Plus className="w-3.5 h-3.5" />
@@ -181,13 +212,22 @@ export function WorkOrders() {
                                             </p>
 
                                             <div className="pt-2 border-t border-slate-200 dark:border-[#333639] flex items-center justify-between gap-2">
-                                                <button
-                                                    onClick={() => navigate(`/work-orders/${wo.id}/report`)}
-                                                    className="text-xs font-heading font-bold text-amber-500 hover:text-amber-400 flex items-center gap-1 uppercase tracking-wider"
-                                                >
-                                                    <span>Reporte</span>
-                                                    <ArrowUpRight className="w-3 h-3" />
-                                                </button>
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() => navigate(`/work-orders/${wo.id}/report`)}
+                                                        className="text-xs font-heading font-bold text-amber-500 hover:text-amber-400 flex items-center gap-1 uppercase tracking-wider"
+                                                    >
+                                                        <span>Reporte</span>
+                                                        <ArrowUpRight className="w-3 h-3" />
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); handleOpenEdit(wo); }}
+                                                        className="p-1 text-slate-400 hover:text-amber-500 rounded-none transition-colors"
+                                                        title="Editar Orden de Trabajo"
+                                                    >
+                                                        <Edit3 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </div>
 
                                                 {wo.estado === 'PENDIENTE' && (
                                                     <button
@@ -263,12 +303,21 @@ export function WorkOrders() {
                                         {wo.fechaProgramada ? new Date(wo.fechaProgramada).toLocaleDateString() : 'N/A'}
                                     </td>
                                     <td className="px-5 py-3.5 text-right">
-                                        <button 
-                                            onClick={() => navigate(`/work-orders/${wo.id}/report`)}
-                                            className="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-white text-xs font-heading font-bold rounded-none uppercase tracking-wider transition-colors"
-                                        >
-                                            Ver Reporte
-                                        </button>
+                                        <div className="flex items-center justify-end gap-2">
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); handleOpenEdit(wo); }}
+                                                className="p-1 hover:bg-slate-200 dark:hover:bg-[#282a2d] text-slate-400 hover:text-amber-500 rounded-none transition-colors"
+                                                title="Editar OT"
+                                            >
+                                                <Edit3 className="w-3.5 h-3.5" />
+                                            </button>
+                                            <button 
+                                                onClick={() => navigate(`/work-orders/${wo.id}/report`)}
+                                                className="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-white text-xs font-heading font-bold rounded-none uppercase tracking-wider transition-colors"
+                                            >
+                                                Ver Reporte
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -277,19 +326,24 @@ export function WorkOrders() {
                 </div>
             )}
 
-            {/* Modal Crear OT */}
+            {/* Modal Crear / Editar OT */}
             {showCreateModal && (
                 <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-                    <div className="bg-white dark:bg-[#1e2022] border border-slate-300 dark:border-[#333639] rounded-none max-w-md w-full p-5 shadow-2xl">
+                    <div className="bg-white dark:bg-[#1e2022] border border-slate-300 dark:border-[#333639] rounded-none max-w-lg w-full p-5 shadow-2xl">
                         <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-[#333639]">
-                            <h3 className="text-sm font-heading font-black text-slate-800 dark:text-slate-100 uppercase tracking-wide">
-                                Nueva Orden de Trabajo
-                            </h3>
+                            <div>
+                                <h3 className="text-sm font-heading font-black text-slate-800 dark:text-slate-100 uppercase tracking-wide">
+                                    {editingOrder ? `Editar Orden de Trabajo (${editingOrder.numeroOt})` : 'Nueva Orden de Trabajo'}
+                                </h3>
+                                <p className="text-[10px] text-slate-400 mt-0.5">
+                                    {editingOrder ? 'Actualice los datos operativos o reasigne técnico.' : 'Programe una nueva intervención técnica.'}
+                                </p>
+                            </div>
                             <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-white">
                                 <X className="w-4 h-4" />
                             </button>
                         </div>
-                        <form onSubmit={handleCreateOrder} className="mt-4 space-y-3">
+                        <form onSubmit={handleSaveOrder} className="mt-4 space-y-3">
                             <div>
                                 <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">Sede / Servicio *</label>
                                 <select
@@ -307,18 +361,65 @@ export function WorkOrders() {
                                 </select>
                             </div>
 
-                            <div>
-                                <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">Tipo de Tarea</label>
-                                <select
-                                    value={orderForm.tipo}
-                                    onChange={(e) => setOrderForm({ ...orderForm, tipo: e.target.value as any })}
-                                    className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500"
-                                >
-                                    <option value="PREVENTIVO">Mantenimiento Preventivo</option>
-                                    <option value="CORRECTIVO">Reparación Correctiva</option>
-                                    <option value="SERVICE_MAYOR">Service Mayor (Horas Críticas)</option>
-                                    <option value="INSPECCION">Inspección de Rutina</option>
-                                </select>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">Tipo de Tarea *</label>
+                                    <select
+                                        value={orderForm.tipo}
+                                        onChange={(e) => setOrderForm({ ...orderForm, tipo: e.target.value as any })}
+                                        className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500"
+                                    >
+                                        <option value="PREVENTIVO">Mantenimiento Preventivo</option>
+                                        <option value="CORRECTIVO">Reparación Correctiva</option>
+                                        <option value="SERVICE_MAYOR">Service Mayor (Horas Críticas)</option>
+                                        <option value="INSPECCION">Inspección de Rutina</option>
+                                    </select>
+                                </div>
+
+                                {editingOrder && (
+                                    <div>
+                                        <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">Estado Operativo</label>
+                                        <select
+                                            value={orderForm.estado}
+                                            onChange={(e) => setOrderForm({ ...orderForm, estado: e.target.value as any })}
+                                            className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500"
+                                        >
+                                            <option value="PENDIENTE">PENDIENTE</option>
+                                            <option value="ASIGNADA">ASIGNADA</option>
+                                            <option value="EN_CURSO">EN CURSO</option>
+                                            <option value="COMPLETADA">COMPLETADA</option>
+                                            <option value="CANCELADA">CANCELADA</option>
+                                        </select>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">Fecha Programada</label>
+                                    <input
+                                        type="date"
+                                        value={orderForm.fechaProgramada || ''}
+                                        onChange={(e) => setOrderForm({ ...orderForm, fechaProgramada: e.target.value })}
+                                        className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500 font-mono"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">Técnico Asignado</label>
+                                    <select
+                                        value={orderForm.tecnicoId || ''}
+                                        onChange={(e) => setOrderForm({ ...orderForm, tecnicoId: e.target.value ? parseInt(e.target.value) : undefined })}
+                                        className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500"
+                                    >
+                                        <option value="">Sin asignar / En cola</option>
+                                        {technicians.map(t => (
+                                            <option key={t.id} value={t.id}>
+                                                {t.nombre} {t.apellido} ({t.rol || t.role})
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
 
                             <div>
@@ -345,7 +446,7 @@ export function WorkOrders() {
                                     type="submit"
                                     className="px-4 py-1.5 text-xs font-heading font-bold text-white bg-amber-600 hover:bg-amber-500 rounded-none shadow-xs uppercase tracking-wider transition-colors"
                                 >
-                                    Emitir Orden
+                                    {editingOrder ? 'Guardar Cambios' : 'Emitir Orden'}
                                 </button>
                             </div>
                         </form>

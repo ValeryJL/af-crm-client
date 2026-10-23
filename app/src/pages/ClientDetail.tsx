@@ -4,7 +4,7 @@ import type { ClientDto, ServiceDto } from '../api/crm';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
     Building2, ArrowLeft, Plus, MapPin, Calendar, Clock, 
-    AlertCircle, CheckCircle2, Wrench, HardHat, Phone, Mail, X
+    AlertCircle, CheckCircle2, Wrench, HardHat, Phone, Mail, X, Edit3, Check
 } from 'lucide-react';
 
 export function ClientDetail() {
@@ -13,6 +13,12 @@ export function ClientDetail() {
     const [services, setServices] = useState<ServiceDto[]>([]);
     const [loading, setLoading] = useState(true);
     const [showNewServiceModal, setShowNewServiceModal] = useState(false);
+    const [showEditClientModal, setShowEditClientModal] = useState(false);
+    const [savingClient, setSavingClient] = useState(false);
+    const [clientError, setClientError] = useState<string | null>(null);
+
+    const [clientEditForm, setClientEditForm] = useState<Partial<ClientDto>>({});
+
     const [serviceForm, setServiceForm] = useState<Partial<ServiceDto>>({
         nombre: '',
         direccionFisica: '',
@@ -40,6 +46,40 @@ export function ClientDetail() {
             console.error('Error loading client 360 data:', e);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleOpenEditClient = () => {
+        if (!client) return;
+        setClientEditForm({
+            razonSocial: client.razonSocial || '',
+            cuitRut: client.cuitRut || '',
+            condicionFiscal: client.condicionFiscal || 'Responsable Inscripto',
+            direccionFiscal: client.direccionFiscal || '',
+            telefonoGeneral: client.telefonoGeneral || '',
+            emailComercial: client.emailComercial || '',
+            notas: client.notas || '',
+            activo: client.activo ?? true
+        });
+        setClientError(null);
+        setShowEditClientModal(true);
+    };
+
+    const handleSaveClient = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!client || !clientEditForm.razonSocial) return;
+
+        try {
+            setSavingClient(true);
+            setClientError(null);
+            await crmApi.updateClient(client.id!, clientEditForm as ClientDto);
+            setShowEditClientModal(false);
+            loadData(client.id!);
+        } catch (e: any) {
+            console.error('Error updating client:', e);
+            setClientError(e.response?.data?.message || e.message || 'Error al actualizar el cliente');
+        } finally {
+            setSavingClient(false);
         }
     };
 
@@ -79,26 +119,36 @@ export function ClientDetail() {
     return (
         <div className="space-y-6 animate-fade-in">
             {/* Navigation / Header */}
-            <div className="flex items-center gap-3 pb-4 border-b border-slate-300 dark:border-[#333639]">
-                <button 
-                    onClick={() => navigate('/clients')} 
-                    className="p-2 text-slate-400 hover:text-white hover:bg-slate-200 dark:hover:bg-[#282a2d] rounded-none transition-colors"
-                    title="Volver a Clientes"
-                >
-                    <ArrowLeft className="w-5 h-5" />
-                </button>
-                <div className="flex-1">
-                    <div className="flex flex-wrap items-center gap-3">
-                        <span className="w-2.5 h-6 bg-amber-500 inline-block"></span>
-                        <h1 className="text-xl sm:text-2xl font-heading font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">
-                            {client.razonSocial}
-                        </h1>
-                        <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-none bg-amber-500/10 text-amber-500 border border-amber-500/30">
-                            {client.cuitRut || 'CUIT no asignado'}
-                        </span>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-300 dark:border-[#333639]">
+                <div className="flex items-center gap-3">
+                    <button 
+                        onClick={() => navigate('/clients')} 
+                        className="p-2 text-slate-400 hover:text-white hover:bg-slate-200 dark:hover:bg-[#282a2d] rounded-none transition-colors"
+                        title="Volver a Clientes"
+                    >
+                        <ArrowLeft className="w-5 h-5" />
+                    </button>
+                    <div>
+                        <div className="flex flex-wrap items-center gap-3">
+                            <span className="w-2.5 h-6 bg-amber-500 inline-block"></span>
+                            <h1 className="text-xl sm:text-2xl font-heading font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">
+                                {client.razonSocial}
+                            </h1>
+                            <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-none bg-amber-500/10 text-amber-500 border border-amber-500/30">
+                                {client.cuitRut || 'CUIT no asignado'}
+                            </span>
+                        </div>
+                        <p className="text-xs text-slate-400 mt-0.5 pl-4.5 font-mono">{client.direccionFiscal || 'Sin dirección fiscal registrada'}</p>
                     </div>
-                    <p className="text-xs text-slate-400 mt-0.5 pl-4.5 font-mono">{client.direccionFiscal || 'Sin dirección fiscal registrada'}</p>
                 </div>
+
+                <button
+                    onClick={handleOpenEditClient}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-100 dark:bg-[#1e2022] hover:bg-slate-200 dark:hover:bg-[#282a2d] text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-[#333639] rounded-none font-heading font-bold text-xs uppercase tracking-wider transition-colors shadow-xs self-start sm:self-auto"
+                >
+                    <Edit3 className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Editar Cliente</span>
+                </button>
             </div>
 
             {/* Client Info Grid */}
@@ -120,119 +170,245 @@ export function ClientDetail() {
                             <span className="text-[9px] font-mono uppercase font-bold text-slate-400">Sedes Activas</span>
                         </div>
                         <div className="p-2.5 bg-slate-50 dark:bg-[#141517] border border-slate-200 dark:border-[#333639]">
-                            <span className="block text-2xl font-heading font-black text-slate-800 dark:text-slate-100">
-                                {services.reduce((acc, s) => acc + (s.totalEquipos || 0), 0)}
-                            </span>
-                            <span className="text-[9px] font-mono uppercase font-bold text-slate-400">Equipos Totales</span>
+                            <span className="block text-2xl font-heading font-black text-slate-800 dark:text-slate-100">{client.totalEquipos || 0}</span>
+                            <span className="text-[9px] font-mono uppercase font-bold text-slate-400">Equipos Asignados</span>
                         </div>
                     </div>
                 </div>
 
                 <div className="bg-white dark:bg-[#1e2022] p-4 rounded-none border border-slate-300 dark:border-[#333639] shadow-xs space-y-2">
-                    <h3 className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">Notas de Cuenta</h3>
+                    <h3 className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">Observaciones de Acceso</h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400 italic">
-                        {client.notas || 'Sin observaciones registradas.'}
+                        {client.notas || 'Sin instrucciones especiales registradas.'}
                     </p>
                 </div>
             </div>
 
-            {/* Services / Locations Section */}
+            {/* Sedes / Servicios Section */}
             <div className="space-y-4">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-[#333639]">
-                    <div>
-                        <h2 className="text-sm font-heading font-black text-slate-800 dark:text-slate-100 uppercase tracking-wide">
-                            Sedes & Contratos de Servicio ({services.length})
+                    <div className="flex items-center gap-2">
+                        <Wrench className="w-4 h-4 text-amber-500" />
+                        <h2 className="text-sm font-heading font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+                            Sedes Físicas y Puntos de Servicio ({services.length})
                         </h2>
-                        <p className="text-xs text-slate-400">Sedes físicas vinculadas, periodicidad preventiva y estatus SLA.</p>
                     </div>
                     <button
                         onClick={() => setShowNewServiceModal(true)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-none font-heading font-bold text-xs uppercase tracking-wider transition-colors shadow-xs"
+                        className="flex items-center gap-1.5 px-3 py-1 bg-amber-600 hover:bg-amber-500 text-white font-heading font-bold text-xs uppercase tracking-wider rounded-none shadow-xs transition-colors"
                     >
                         <Plus className="w-3.5 h-3.5" />
-                        <span>Añadir Servicio / Sede</span>
+                        <span>Nueva Sede</span>
                     </button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {services.map((service) => {
-                        const isOverdue = service.slaStatus === 'OVERDUE';
-                        const isUpcoming = service.slaStatus === 'UPCOMING';
-                        return (
+                {services.length === 0 ? (
+                    <div className="p-8 text-center bg-white dark:bg-[#1e2022] border border-slate-300 dark:border-[#333639] rounded-none">
+                        <MapPin className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                        <p className="text-xs text-slate-400">No hay sedes asociadas a esta empresa cliente.</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {services.map((srv) => (
                             <div 
-                                key={service.id}
-                                onClick={() => navigate(`/services/${service.id}`)}
-                                className="bg-white dark:bg-[#1e2022] border border-slate-300 dark:border-[#333639] p-4 rounded-none shadow-xs hover:border-amber-500 dark:hover:border-amber-500 cursor-pointer transition-colors space-y-3"
+                                key={srv.id}
+                                onClick={() => navigate(`/services/${srv.id}`)}
+                                className="bg-white dark:bg-[#1e2022] p-4 border border-slate-300 dark:border-[#333639] hover:border-amber-500 dark:hover:border-amber-500 cursor-pointer transition-colors shadow-xs space-y-3"
                             >
-                                <div className="flex items-start justify-between gap-3">
+                                <div className="flex items-start justify-between">
                                     <div>
-                                        <div className="flex items-center gap-2">
-                                            <h3 className="font-heading font-bold text-slate-800 dark:text-slate-100 text-sm">
-                                                {service.nombre}
-                                            </h3>
-                                            <span className={`text-[9px] font-mono font-black uppercase px-2 py-0.5 rounded-none border ${
-                                                isOverdue 
-                                                    ? 'bg-rose-500/20 text-rose-400 border-rose-500/30' 
-                                                    : isUpcoming 
-                                                        ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' 
-                                                        : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-                                            }`}>
-                                                {service.slaStatus}
-                                            </span>
-                                        </div>
-                                        <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-1">
-                                            <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                                            <span className="truncate">{service.direccionFisica}</span>
+                                        <h3 className="text-sm font-heading font-bold text-slate-800 dark:text-slate-100 uppercase">
+                                            {srv.nombre}
+                                        </h3>
+                                        <div className="flex items-center gap-1 text-[11px] text-slate-400 mt-0.5">
+                                            <MapPin className="w-3 h-3 text-amber-500 shrink-0" />
+                                            <span>{srv.direccionFisica}</span>
                                         </div>
                                     </div>
-
-                                    <div className="p-2 bg-slate-100 dark:bg-[#141517] text-slate-400 border border-slate-300 dark:border-[#333639]">
-                                        <Wrench className="w-4 h-4" />
-                                    </div>
+                                    <span className="font-mono text-[10px] font-bold px-2 py-0.5 bg-slate-100 dark:bg-[#141517] border border-slate-300 dark:border-[#333639] text-slate-600 dark:text-slate-300 uppercase">
+                                        {srv.frecuenciaVisita}
+                                    </span>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-2 text-xs text-slate-500 pt-2 border-t border-slate-200 dark:border-[#333639]">
-                                    <div>
-                                        <span className="block text-[10px] font-mono uppercase font-bold text-slate-400">Frecuencia:</span>
-                                        <span className="font-mono font-semibold text-slate-700 dark:text-slate-200">{service.frecuenciaVisita}</span>
+                                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200 dark:border-[#333639] text-[11px] font-mono">
+                                    <div className="text-slate-500">
+                                        Última visita: <span className="text-slate-700 dark:text-slate-300 font-bold">{srv.fechaUltimaVisita || 'N/A'}</span>
                                     </div>
-                                    <div>
-                                        <span className="block text-[10px] font-mono uppercase font-bold text-slate-400">Próx. Visita Límite:</span>
-                                        <span className={`font-mono font-semibold ${isOverdue ? 'text-rose-500 font-bold' : 'text-slate-700 dark:text-slate-200'}`}>
-                                            {service.fechaProximaVisitaLimite || 'No programada'}
-                                        </span>
+                                    <div className="text-slate-500 text-right">
+                                        Próx. límite: <span className="text-amber-500 font-bold">{srv.fechaProximaVisitaLimite || 'Calculando'}</span>
                                     </div>
                                 </div>
                             </div>
-                        );
-                    })}
-                    {services.length === 0 && (
-                        <div className="col-span-full py-8 text-center text-xs text-slate-400 bg-white dark:bg-[#1e2022] border border-slate-300 dark:border-[#333639]">
-                            No hay sedes operativas registradas para este cliente.
-                        </div>
-                    )}
-                </div>
+                        ))}
+                    </div>
+                )}
             </div>
 
-            {/* Modal Crear Servicio */}
-            {showNewServiceModal && (
-                <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-                    <div className="bg-white dark:bg-[#1e2022] border border-slate-300 dark:border-[#333639] rounded-none max-w-md w-full p-5 shadow-2xl">
-                        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-[#333639]">
-                            <h3 className="text-sm font-heading font-black text-slate-800 dark:text-slate-100 uppercase tracking-wide">
-                                Añadir Sede a {client.razonSocial}
-                            </h3>
-                            <button onClick={() => setShowNewServiceModal(false)} className="text-slate-400 hover:text-white">
+            {/* Modal Editar Cliente */}
+            {showEditClientModal && (
+                <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 flex items-center justify-center p-4 animate-fade-in">
+                    <div className="bg-white dark:bg-[#1e2022] border border-slate-300 dark:border-[#333639] w-full max-w-lg shadow-2xl p-6 relative">
+                        <div className="flex items-center justify-between pb-3 border-b border-slate-300 dark:border-[#333639] mb-4">
+                            <div>
+                                <h2 className="text-sm font-heading font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight">
+                                    Editar Cliente Industrial
+                                </h2>
+                                <p className="text-[11px] text-slate-400">Actualiza los datos comerciales y de contacto</p>
+                            </div>
+                            <button
+                                onClick={() => setShowEditClientModal(false)}
+                                className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                            >
                                 <X className="w-4 h-4" />
                             </button>
                         </div>
-                        <form onSubmit={handleCreateService} className="mt-4 space-y-3">
+
+                        <form onSubmit={handleSaveClient} className="space-y-4">
                             <div>
-                                <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">Nombre / Identificador Sede *</label>
+                                <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
+                                    Razón Social *
+                                </label>
                                 <input
                                     type="text"
                                     required
-                                    placeholder="Ej: Planta Principal / Nave 2"
+                                    value={clientEditForm.razonSocial || ''}
+                                    onChange={(e) => setClientEditForm({ ...clientEditForm, razonSocial: e.target.value })}
+                                    className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500 font-bold"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
+                                        CUIT / RUT
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={clientEditForm.cuitRut || ''}
+                                        onChange={(e) => setClientEditForm({ ...clientEditForm, cuitRut: e.target.value })}
+                                        className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500 font-mono"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
+                                        Condición Fiscal
+                                    </label>
+                                    <select
+                                        value={clientEditForm.condicionFiscal || 'Responsable Inscripto'}
+                                        onChange={(e) => setClientEditForm({ ...clientEditForm, condicionFiscal: e.target.value })}
+                                        className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500"
+                                    >
+                                        <option value="Responsable Inscripto">Resp. Inscripto</option>
+                                        <option value="Monotributo">Monotributo</option>
+                                        <option value="Exento">Exento</option>
+                                        <option value="Consumidor Final">Cons. Final</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
+                                    Dirección Fiscal
+                                </label>
+                                <input
+                                    type="text"
+                                    value={clientEditForm.direccionFiscal || ''}
+                                    onChange={(e) => setClientEditForm({ ...clientEditForm, direccionFiscal: e.target.value })}
+                                    className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
+                                        Teléfono General
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={clientEditForm.telefonoGeneral || ''}
+                                        onChange={(e) => setClientEditForm({ ...clientEditForm, telefonoGeneral: e.target.value })}
+                                        className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
+                                        Email Comercial
+                                    </label>
+                                    <input
+                                        type="email"
+                                        value={clientEditForm.emailComercial || ''}
+                                        onChange={(e) => setClientEditForm({ ...clientEditForm, emailComercial: e.target.value })}
+                                        className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">
+                                    Observaciones / Requisitos de Acceso
+                                </label>
+                                <textarea
+                                    rows={3}
+                                    value={clientEditForm.notas || ''}
+                                    onChange={(e) => setClientEditForm({ ...clientEditForm, notas: e.target.value })}
+                                    className="w-full text-xs p-2 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500"
+                                />
+                            </div>
+
+                            {clientError && (
+                                <div className="p-3 bg-rose-500/10 border border-rose-500/30 text-rose-500 text-xs flex items-center gap-2">
+                                    <AlertCircle className="w-4 h-4 shrink-0" />
+                                    <span>{clientError}</span>
+                                </div>
+                            )}
+
+                            <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-200 dark:border-[#333639]">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowEditClientModal(false)}
+                                    className="px-3.5 py-1.5 text-xs font-bold text-slate-400 hover:text-white rounded-none transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={savingClient}
+                                    className="px-4 py-1.5 text-xs font-heading font-bold text-white bg-amber-600 hover:bg-amber-500 rounded-none shadow-xs uppercase tracking-wider transition-colors disabled:opacity-50"
+                                >
+                                    {savingClient ? 'Guardando...' : 'Guardar Cambios'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Nueva Sede */}
+            {showNewServiceModal && (
+                <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 flex items-center justify-center p-4 animate-fade-in">
+                    <div className="bg-white dark:bg-[#1e2022] border border-slate-300 dark:border-[#333639] w-full max-w-lg shadow-2xl p-6 relative">
+                        <div className="flex items-center justify-between pb-3 border-b border-slate-300 dark:border-[#333639] mb-4">
+                            <div>
+                                <h2 className="text-sm font-heading font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight">
+                                    Nueva Sede / Punto de Servicio
+                                </h2>
+                                <p className="text-[11px] text-slate-400">Asocia una ubicación física a {client.razonSocial}</p>
+                            </div>
+                            <button
+                                onClick={() => setShowNewServiceModal(false)}
+                                className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleCreateService} className="space-y-4">
+                            <div>
+                                <label className="block text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 uppercase mb-1">Nombre de la Sede *</label>
+                                <input
+                                    type="text"
+                                    required
+                                    placeholder="Planta Principal / Edificio Central"
                                     value={serviceForm.nombre}
                                     onChange={(e) => setServiceForm({ ...serviceForm, nombre: e.target.value })}
                                     className="w-full text-xs p-2.5 rounded-none border border-slate-300 dark:border-[#333639] bg-white dark:bg-[#141517] text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500"
