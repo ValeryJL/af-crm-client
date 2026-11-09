@@ -1,0 +1,34 @@
+name: Despliegue Continuo (CD) - AF-CRM Client
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Desplegar en server-af (Self-Hosted Runner)
+    runs-on: self-hosted
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Asegurar red Docker af-network
+        run: |
+          docker network inspect af-network >/dev/null 2>&1 || docker network create af-network
+
+      - name: Configurar archivo .env
+        run: |
+          if [ -f /home/valeryjl/projects/Af-CRM/af-crm-client/.env ]; then
+            cp /home/valeryjl/projects/Af-CRM/af-crm-client/.env .env
+          else
+            cp .env.example .env
+          fi
+
+      - name: Reconstruir y levantar contenedor en af-network (sin exponer puertos locales)
+        run: |
+          docker compose -p af-crm-client -f docker-compose.prod.yml up -d --build --remove-orphans
+
+      - name: Limpiar imágenes obsoletas
+        run: |
+          docker image prune -f

@@ -1,0 +1,21 @@
+services:
+  frontend:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+      args:
+        - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
+        - VITE_API_URL=${VITE_API_URL}
+    container_name: af-crm-frontend
+    expose:
+      - "80"
+    environment:
+      - API_UPSTREAM=http://af-crm-backend:8080
+    restart: unless-stopped
+    networks:
+      - af-network
+
+networks:
+  af-network:
+    name: af-network
+    external: true
